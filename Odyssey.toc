@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: Odyssey
+## Title-frFR: Odyssey
+## Notes: XP bar and leveling tracker
+## Notes-frFR: Barre d'XP et suivi de progression
+## Author: GaelleBriet
+## Version: @project-version@
+## License: MIT
+## SavedVariables: OdysseyDB
+
+Probe.lua
+Core.lua
