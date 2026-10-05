@@ -17,5 +17,6 @@ Compat.lua
 Sources\XP.lua
 Texts.lua
 Styles.lua
+Bar.lua
 Probe.lua
 Core.lua
