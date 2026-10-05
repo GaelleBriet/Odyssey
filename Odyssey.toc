@@ -13,6 +13,7 @@ Locales\frFR.lua
 Defaults.lua
 Calc.lua
 History.lua
+Compat.lua
 Sources\XP.lua
 Texts.lua
 Styles.lua
