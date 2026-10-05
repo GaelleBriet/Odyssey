@@ -1,0 +1,13 @@
+package-as: Odyssey
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - docs
+  - tests
+  - tools
+  - .github
+  - .gitignore
+  - README.md

@@ -53,8 +53,14 @@ Odyssey/
   Options.lua          panneau de réglages
   Locales/enUS.lua     Locales/frFR.lua
   Media/               textures propres à l'addon
+  Defaults.lua         réglages par défaut, fusion, accès par chemin
+  Texts.lua            textes de la barre
+  Styles.lua           styles et thèmes de couleur
+  Compat.lua           appels au jeu (quêtes, barre native, niveau max, messages d'XP)
+  Probe.lua            /odyssey probe : liste des API présentes sur le client
 LICENSE (MIT) · README.md · CHANGELOG.md · .pkgmeta
-tests/                 tests de Calc.lua et History.lua (luajit)
+tests/                 tests des modules purs (luajit)
+tools/                 générateur de textures, synchronisation de secours
 ```
 
 **Flux** : événement du jeu → la source met à jour son instantané → la barre se rafraîchit ; le tooltip lit le même instantané. La barre ne connaît que l'interface « source » : `Get()` renvoie l'instantané, `Subscribe(fn)` notifie les changements. Ajouter la réputation = écrire une nouvelle source.
@@ -65,7 +71,7 @@ Instantané fourni par la source XP :
 - **XP** : actuelle, maximale, restante, pourcentage ; niveau ; `isMaxLevel`.
 - **Repos** : XP de repos et part de la barre qu'il couvre.
 - **Session** : XP gagnée depuis la connexion, durée, XP/h, temps estimé avant le level up (affiché seulement après un minimum de données).
-- **Kills restants** : XP restante divisée par l'XP du dernier kill. Le dernier gain est mesuré par la variation d'XP, sans lire le texte du chat (indépendant de la langue).
+- **Kills restants** : XP restante divisée par l'XP du dernier kill. Le dernier gain est mesuré par la variation d'XP ; un message d'XP n'est compté comme kill que s'il ne correspond pas au texte de récompense de quête fourni par le client dans sa langue (indépendant de la langue).
 - **`/played`** : `RequestTimePlayed()` à la connexion et à chaque level up ; réponse via `TIME_PLAYED_MSG` ; le compteur avance localement entre deux réponses. Les réponses automatiques n'apparaissent pas dans le chat ; le `/played` manuel s'affiche toujours. Calcul du temps à ce niveau et du temps moyen par niveau.
 - **Quêtes à rendre** : liste des quêtes terminées du journal avec la récompense d'XP de chacune ; somme, et pourcentage de barre qu'elle représente.
 
@@ -76,7 +82,7 @@ Instantané fourni par la source XP :
 - Par personnage (clé royaume-nom), dans `OdysseyDB`.
 - À chaque level up, on relève le temps joué total fourni par `/played`. Le temps passé à un niveau = différence entre deux level ups consécutifs. On enregistre : niveau, durée, XP du niveau, XP/h moyen, date.
 - L'historique commence à l'installation : les niveaux précédents sont inconnus et ne sont pas inventés.
-- Le tooltip affiche : rythme actuel (XP/h) comparé à la moyenne des niveaux déjà enregistrés (« +18 % »), et une mini-courbe des derniers niveaux (barres de hauteur proportionnelle à la durée). Sans historique, le bloc est masqué.
+- Le tooltip affiche : rythme actuel (XP/h) comparé à la moyenne des niveaux déjà enregistrés (« +18 % »), et une ligne par niveau récent avec une barre horizontale proportionnelle à la durée. Sans historique, le bloc est masqué.
 - Option pour effacer l'historique d'un personnage.
 
 ## 7. Barre (`Bar.lua`)
@@ -86,7 +92,7 @@ Instantané fourni par la source XP :
 - **Styles** : quelques styles prédéfinis très soignés (par exemple Plat, Dégradé, Brillant) et thèmes de couleur (classe, faction, minimaliste). Textures propres à l'addon, aucun fichier Blizzard copié.
 - **Texte sur la barre** : trois emplacements (gauche, centre, droite), chacun au choix parmi : pourcentage, `actuel / max`, restant, repos, XP/h, temps avant level up, kills restants, quêtes à rendre, niveau, rien. Défaut : niveau / `actuel / max (pourcentage)` / repos.
 - Au niveau maximum : la barre se masque ou affiche un texte adapté (option).
-- Barre Blizzard : masquée par défaut, case pour la réafficher ; masquage sans remplacer les fonctions de Blizzard.
+- Barre Blizzard : masquée par défaut, case pour la réafficher ; masquage sans remplacer les fonctions de Blizzard. Sur ce client, les barres XP et réputation natives partagent un conteneur : masquer l'XP masque aussi la réputation (limitation connue jusqu'à la barre de réputation d'Odyssey).
 - Clic droit : ouvre les réglages. Survol : tooltip.
 
 ## 8. Tooltip (`Tooltip.lua`)
@@ -104,7 +110,7 @@ Nombres formatés selon la langue, option de format abrégé (`12,3k`).
 
 ## 9. Réglages et sauvegarde (`Options.lua`, `Core.lua`)
 
-- Panneau dans les options des addons, ouvert aussi par clic droit sur la barre et par `/odyssey`.
+- Panneau dans les options des addons, ouvert aussi par clic droit sur la barre et par `/odyssey`. Les réglages sont des boutons qui changent de valeur au clic (pas de menus déroulants ni de curseurs, dont les modèles varient selon le client).
 - Contenu : verrouiller, taille/échelle, style et couleurs, trois emplacements de texte, barre Blizzard, blocs du tooltip, format des nombres, effacer l'historique, réinitialiser la session.
 - `OdysseyDB` fusionnée avec les valeurs par défaut au chargement (les nouveaux réglages n'écrasent pas les anciens) ; numéro de version des données pour les migrations futures.
 - Position et apparence au choix par personnage ou pour le compte. Les statistiques de session ne sont pas sauvegardées.
