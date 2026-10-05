@@ -12,5 +12,9 @@ Locales\enUS.lua
 Locales\frFR.lua
 Defaults.lua
 Calc.lua
+History.lua
+Sources\XP.lua
+Texts.lua
+Styles.lua
 Probe.lua
 Core.lua
