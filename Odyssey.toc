@@ -18,5 +18,6 @@ Sources\XP.lua
 Texts.lua
 Styles.lua
 Bar.lua
+Tooltip.lua
 Probe.lua
 Core.lua
