@@ -8,5 +8,9 @@
 ## License: MIT
 ## SavedVariables: OdysseyDB
 
+Locales\enUS.lua
+Locales\frFR.lua
+Defaults.lua
+Calc.lua
 Probe.lua
 Core.lua
