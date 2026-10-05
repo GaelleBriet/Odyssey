@@ -94,6 +94,28 @@ test("sparkline returns the last n levels scaled to the longest", function()
   eq(H.sparkline(H.newStore(), 6), {})
 end)
 
+test("sanitize repairs a corrupted store", function()
+  eq(H.sanitize("x"), { levels = {} })
+  local s = H.sanitize({
+    levels = {
+      [10] = { level = 10, duration = 3600, xpMax = 3600, rate = 3600 },
+      [11] = { level = 11, duration = 1800 },
+      [12] = "junk",
+    },
+    current = { level = 5 },
+  })
+  eq(s.current, nil)
+  eq(#H.entries(s), 1)
+  eq(H.entries(s)[1].level, 10)
+  eq(H.sanitize({ levels = "x" }).levels, {})
+end)
+
+test("a sanitized store survives a /played reply and a tooltip read", function()
+  local s = H.sanitize({ levels = { [3] = { level = 3 } }, current = { level = 5 } })
+  H.onPlayed(s, 5, 1000, 100, 500, 1)
+  eq(H.averageRate(s), nil)
+end)
+
 test("reset empties the store", function()
   local s = H.newStore()
   H.onPlayed(s, 10, 10000, 1000, 5000, 111)

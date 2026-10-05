@@ -8,11 +8,17 @@ function ns.CharKey()
   return GetRealmName() .. "-" .. UnitName("player")
 end
 
+local historyChecked = {} -- per session: saved history is repaired once per character
+
 function ns.CharData()
   local key = ns.CharKey()
-  OdysseyDB.chars[key] = OdysseyDB.chars[key] or {}
+  if type(OdysseyDB.chars[key]) ~= "table" then OdysseyDB.chars[key] = {} end
   local data = OdysseyDB.chars[key]
-  data.history = data.history or History.newStore()
+  if not historyChecked[key] then
+    data.history = History.sanitize(data.history)
+    historyChecked[key] = true
+  end
+  if data.settings ~= nil and type(data.settings) ~= "table" then data.settings = nil end
   return data
 end
 
@@ -91,7 +97,10 @@ function handlers.UPDATE_EXHAUSTION() ns.source:onRestedUpdate() end
 function handlers.CHAT_MSG_COMBAT_XP_GAIN(msg)
   if Compat.isKillXPMessage(msg) then ns.source:onKillXPMessage() end
 end
-function handlers.PLAYER_LEVEL_UP() requestPlayed() end
+function handlers.PLAYER_LEVEL_UP(newLevel)
+  ns.source:onLevelUp(newLevel)
+  requestPlayed()
+end
 function handlers.QUEST_LOG_UPDATE() scheduleQuestRefresh() end
 
 function handlers.PLAYER_ENTERING_WORLD()
@@ -102,7 +111,8 @@ end
 
 function handlers.TIME_PLAYED_MSG(total, levelTime)
   ns.source:onPlayed(total, levelTime)
-  History.onPlayed(ns.CharData().history, UnitLevel("player"), total, levelTime, UnitXPMax("player"), time())
+  -- The source's level is synced from PLAYER_LEVEL_UP, so it is right even when UnitLevel lags.
+  History.onPlayed(ns.CharData().history, ns.source.level, total, levelTime, UnitXPMax("player"), time())
   restoreChatPlayed()
 end
 

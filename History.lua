@@ -12,6 +12,29 @@ function History.newStore()
   return { levels = {} }
 end
 
+local function validEntry(e)
+  return type(e) == "table" and type(e.level) == "number" and type(e.duration) == "number"
+    and type(e.xpMax) == "number" and e.duration > 0
+end
+
+-- Repairs a store read from saved variables: drops malformed entries and baseline.
+function History.sanitize(store)
+  if type(store) ~= "table" then return History.newStore() end
+  if type(store.levels) ~= "table" then store.levels = {} end
+  for key, e in pairs(store.levels) do
+    if validEntry(e) then
+      e.rate = e.xpMax * 3600 / e.duration
+    else
+      store.levels[key] = nil
+    end
+  end
+  local cur = store.current
+  if type(cur) ~= "table" or type(cur.level) ~= "number" or type(cur.start) ~= "number" then
+    store.current = nil
+  end
+  return store
+end
+
 -- Feed every /played reply. `total` and `levelTime` are the two values of TIME_PLAYED_MSG.
 -- Returns the record of a level that was just completed, otherwise nil.
 function History.onPlayed(store, level, total, levelTime, xpMax, now)

@@ -59,11 +59,21 @@ function XPSource:pairGain(gain)
   end
 end
 
+-- PLAYER_LEVEL_UP carries the new level; UnitLevel can lag behind it on Classic clients.
+-- Only the level is synced here: the XP crossing is counted by the XP update itself.
+function XPSource:onLevelUp(newLevel)
+  if newLevel and newLevel > self.level then
+    self.level = newLevel
+    self:notify()
+  end
+end
+
 function XPSource:onXPUpdate()
   local api = self.api
   local level, xp, xpMax = api.unitLevel(), api.unitXP(), api.unitXPMax()
   local gain = Calc.xpDelta(self.xp, self.xpMax, xp, level > self.level)
-  self.level, self.xp, self.xpMax = level, xp, xpMax
+  -- The level never goes down within a session; a stale UnitLevel must not undo onLevelUp.
+  self.level, self.xp, self.xpMax = math.max(level, self.level), xp, xpMax
   if gain > 0 then
     self.sessionXP = self.sessionXP + gain
     self:pairGain(gain)

@@ -10,17 +10,14 @@ function Defaults.copy(v)
   return out
 end
 
--- Fills `target` with the keys it lacks; never overwrites a value of the right type.
+-- Fills `target` with the keys it lacks and replaces values whose type differs from the
+-- default; never overwrites a value of the right type.
 function Defaults.merge(target, defaults)
   for k, v in pairs(defaults) do
-    if target[k] == nil then
+    if type(target[k]) ~= type(v) then
       target[k] = Defaults.copy(v)
     elseif type(v) == "table" then
-      if type(target[k]) == "table" then
-        Defaults.merge(target[k], v)
-      else
-        target[k] = Defaults.copy(v)
-      end
+      Defaults.merge(target[k], v)
     end
   end
   return target

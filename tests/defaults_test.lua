@@ -25,6 +25,14 @@ test("merge repairs a value of the wrong type", function()
   eq(db.point[1], "BOTTOM")
 end)
 
+test("merge replaces scalars of the wrong type", function()
+  local db = { width = "wide", questListMax = "5", locked = 1 }
+  D.merge(db, { width = 480, questListMax = 5, locked = true })
+  eq(db.width, 480)
+  eq(db.questListMax, 5)
+  eq(db.locked, true)
+end)
+
 test("merge does not alias the defaults", function()
   local defaults = { tooltip = { level = true } }
   local db = D.merge({}, defaults)

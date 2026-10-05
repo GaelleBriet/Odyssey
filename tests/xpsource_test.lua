@@ -71,6 +71,25 @@ test("an XP update followed by a kill message sets the last gain", function()
   eq(src:Get().lastGain, 80)
 end)
 
+test("a level-up reported late by UnitLevel is not counted twice", function()
+  local src, state = newSource({ xp = 900 })
+  -- XP update arrives while UnitLevel and UnitXPMax still report the old level
+  state.xp = 100
+  src:onXPUpdate()
+  src:onLevelUp(11)
+  state.level, state.xpMax, state.xp = 11, 1200, 200
+  src:onXPUpdate()
+  eq(src:Get().session.xpGained, 300)
+end)
+
+test("a stale lower UnitLevel never moves the level backwards", function()
+  local src, state = newSource()
+  src:onLevelUp(11)
+  state.level = 10
+  src:onXPUpdate()
+  eq(src:Get().level, 11)
+end)
+
 test("an XP update alone (a quest) does not set the last gain", function()
   local src, state = newSource()
   state.time = 10
