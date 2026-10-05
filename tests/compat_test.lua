@@ -70,6 +70,21 @@ test("classic quest API path", function()
   end)
 end)
 
+test("a quest XP message is not a kill (localized global string)", function()
+  withGlobals({
+    COMBATLOG_XP_GAIN_FIRST_PERSON_UNNAMED = "Vous gagnez %d points d'expérience.",
+  }, function()
+    eq(Compat.isKillXPMessage("Vous gagnez 600 points d'expérience."), false)
+    eq(Compat.isKillXPMessage("Manouvrier de la KapitalRisk meurt, vous gagnez 130 points d'expérience."), true)
+  end)
+end)
+
+test("without the global string every XP message counts as a kill", function()
+  withGlobals({ COMBATLOG_XP_GAIN_FIRST_PERSON_UNNAMED = false }, function()
+    eq(Compat.isKillXPMessage("You gain 600 experience."), true)
+  end)
+end)
+
 test("isMaxLevel prefers IsPlayerAtEffectiveMaxLevel", function()
   withGlobals({ IsPlayerAtEffectiveMaxLevel = function() return true end }, function()
     eq(Compat.isMaxLevel(), true)

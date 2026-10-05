@@ -88,7 +88,9 @@ local handlers = {}
 
 function handlers.PLAYER_XP_UPDATE() ns.source:onXPUpdate() end
 function handlers.UPDATE_EXHAUSTION() ns.source:onRestedUpdate() end
-function handlers.CHAT_MSG_COMBAT_XP_GAIN() ns.source:onKillXPMessage() end
+function handlers.CHAT_MSG_COMBAT_XP_GAIN(msg)
+  if Compat.isKillXPMessage(msg) then ns.source:onKillXPMessage() end
+end
 function handlers.PLAYER_LEVEL_UP() requestPlayed() end
 function handlers.QUEST_LOG_UPDATE() scheduleQuestRefresh() end
 

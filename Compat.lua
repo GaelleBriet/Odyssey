@@ -73,6 +73,21 @@ function Compat.completedQuestXP()
   return result
 end
 
+-- Turns a GlobalStrings format ("You gain %d experience.") into an anchored Lua pattern.
+local function formatToPattern(fmt)
+  local escaped = fmt:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+  escaped = escaped:gsub("%%%%d", "%%d+"):gsub("%%%%s", ".+")
+  return "^" .. escaped .. "$"
+end
+
+-- CHAT_MSG_COMBAT_XP_GAIN also fires for quest rewards ("You gain 600 experience.").
+-- The client's own localized string tells the two apart, so this works in every language.
+function Compat.isKillXPMessage(msg)
+  local fmt = COMBATLOG_XP_GAIN_FIRST_PERSON_UNNAMED
+  if not fmt or not msg then return true end
+  return not msg:find(formatToPattern(fmt))
+end
+
 -- The native XP bar is hidden by transparency only (no replaced functions, no taint).
 function Compat.setNativeXPBarHidden(hidden)
   local frame = MainMenuExpBar or StatusTrackingBarManager
