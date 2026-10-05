@@ -19,5 +19,6 @@ Texts.lua
 Styles.lua
 Bar.lua
 Tooltip.lua
+Options.lua
 Probe.lua
 Core.lua
