@@ -2,7 +2,9 @@
 
 ## 0.1.0
 
-- Custom XP bar in four styles (smooth, segmented, neon, thin line) and eleven palettes.
+- Custom XP bar: texture (incl. LibSharedMedia), corners, border, background opacity, gloss, shadow, ticks, glow, spark,
+  text position; four presets; eleven palettes plus per-element colours; show on mouseover.
+- Tabbed settings with dropdowns, checkboxes and colour swatches.
 - Rested XP and quests-to-turn-in segments on the bar; three configurable text slots.
 - Font choice for the bar and the tooltip: game fonts, bundled OFL fonts, LibSharedMedia fonts.
 - Minimal tooltip with the essentials; hold Shift for quest-by-quest XP, kills, session and history.

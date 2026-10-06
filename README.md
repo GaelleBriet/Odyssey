@@ -2,8 +2,12 @@
 
 **XP bar & leveling tracker** for World of Warcraft: Forever (Classic).
 
-- A custom XP bar in **four styles** (smooth, segmented, neon, thin line) and **eleven palettes**
-  (arcane, royal gold, emerald, frost, ember, twilight rose, starry night, fel, monochrome, class colour, faction).
+- A custom XP bar you shape freely: **texture** (flat, gradient, glossy, smooth, plus every LibSharedMedia
+  bar texture), square or rounded **corners**, **border**, **background opacity**, **effects** (gloss, shadow,
+  ticks every 10 % or 5 %, glow, spark), text inside, above or below. Four **presets** get you started.
+- **Eleven palettes** (arcane, royal gold, emerald, frost, ember, twilight rose, starry night, fel, monochrome,
+  class colour, faction), and you can pick any element's colour yourself with the colour wheel.
+- **Show on mouseover**, with an adjustable opacity while hidden.
 - Rested XP and "quests ready to turn in" drawn right on the bar.
 - Three text slots you choose freely: percentage, current / max, remaining, rested, XP per hour, time to level, kills to level, quest XP, level.
 - **Fonts of your choice** for the bar and the tooltip: the game's fonts, four bundled open fonts
@@ -14,7 +18,7 @@
 
 ## Usage
 
-- `/odyssey` or right-click the bar: settings.
+- `/odyssey` or right-click the bar: settings (tabs Bar, Colours, Texts, Tooltip).
 - `/odyssey unlock` then drag the bar; `/odyssey lock` to fix it.
 - `/odyssey reset`: restart the session figures.
 

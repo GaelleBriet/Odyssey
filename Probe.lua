@@ -13,7 +13,8 @@ local PROBES = {
   "MainMenuExpBar", "StatusTrackingBarManager", "ReputationWatchBar",
   "UIParent", "GameTooltip", "RAID_CLASS_COLORS", "UnitFactionGroup", "NUM_CHAT_WINDOWS",
   "STANDARD_TEXT_FONT", "CreateColor", "LibStub", "IsShiftKeyDown", "UISpecialFrames",
-  "UIParent.CreateMaskTexture",
+  "UIParent.CreateMaskTexture", "ColorPickerFrame", "ColorPickerFrame.SetupColorPickerAndShow",
+  "GetCursorPosition", "ShowUIPanel",
 }
 
 local function resolve(path)
