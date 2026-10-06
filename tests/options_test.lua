@@ -369,3 +369,9 @@ test("alerts live in General and always edit the profile's XP settings", functio
   truthy(control("alerts.levelUpSummary"))
   truthy(control("alerts.restReminder"))
 end)
+
+test("options that need it carry an explanation shown on hover", function()
+  for _, key in ipairs({ "alerts.questsReady", "alerts.levelUpSummary", "alerts.restReminder", "clickThrough", "strata" }) do
+    eq(type(control(key).desc), "string", key)
+  end
+end)

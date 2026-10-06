@@ -92,8 +92,10 @@ Options.CONTROLS = {
   c("bar", "visibility", "combatMode", "menu", "In combat", { values = { "show", "fade", "hide" }, display = named("condition.") }),
   c("bar", "visibility", "instanceMode", "menu", "In dungeons", { values = { "show", "fade", "hide" }, display = named("condition.") }),
   c("bar", "visibility", "hideWhenDead", "check", "Hide when dead"),
-  c("bar", "visibility", "strata", "menu", "Layer", { values = { "BACKGROUND", "LOW", "MEDIUM", "HIGH" }, display = named("strata.") }),
-  c("bar", "visibility", "clickThrough", "check", "Click-through", { enabledWhen = { key = "visibility", value = "always" } }),
+  c("bar", "visibility", "strata", "menu", "Layer", { values = { "BACKGROUND", "LOW", "MEDIUM", "HIGH" }, display = named("strata."),
+    desc = "desc.strata" }),
+  c("bar", "visibility", "clickThrough", "check", "Click-through", { enabledWhen = { key = "visibility", value = "always" },
+    desc = "desc.clickThrough" }),
   c("bar", "visibility", "visibility", "menu", "Mode", { values = { "always", "mouseover" }, display = named("visibility.") }),
   c("bar", "visibility", "fadedAlpha", "slider", "Opacity when hidden", { min = 0, max = 1, step = 0.05, display = percent,
     enabledWhen = { key = "visibility", value = "mouseover" } }),
@@ -137,9 +139,9 @@ Options.CONTROLS = {
 
   c("general", "behaviour", "enabled", "check", "Show the reputation bar", { bars = { "rep" } }),
   c("general", "behaviour", "locked", "check", "Lock bar"),
-  c("general", "alerts", "alerts.questsReady", "check", "Quests will level you up", { global = true }),
-  c("general", "alerts", "alerts.levelUpSummary", "check", "Level-up summary", { global = true }),
-  c("general", "alerts", "alerts.restReminder", "check", "Rest reminder at logout", { global = true }),
+  c("general", "alerts", "alerts.questsReady", "check", "Quest turn-in alert", { global = true, desc = "desc.questsReady" }),
+  c("general", "alerts", "alerts.levelUpSummary", "check", "Level-up summary", { global = true, desc = "desc.levelUpSummary" }),
+  c("general", "alerts", "alerts.restReminder", "check", "Rest reminder at logout", { global = true, desc = "desc.restReminder" }),
   c("general", "behaviour", "hideNativeBar", "check", "Hide Blizzard XP bar", { bars = { "xp" } }),
   c("general", "behaviour", "maxLevelBehavior", "menu", "At max level", { values = { "hide", "show" }, display = named("max."), bars = { "xp" } }),
 
@@ -785,6 +787,20 @@ local function buildRow(card, control, y, bar)
   label:SetWidth(CARD_W - 24 - widgetSpace)
   label:SetWordWrap(false)
   label:SetText(L[control.label])
+  -- Explanation on hover, for options whose name alone is not enough.
+  if control.desc then
+    local hit = CreateFrame("Frame", nil, card)
+    hit:SetAllPoints(label)
+    hit:EnableMouse(true)
+    hit:SetScript("OnEnter", function(self)
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+      GameTooltip:SetText(L[control.label], 1, 1, 1)
+      GameTooltip:AddLine(L[control.desc], 0.85, 0.82, 0.9, true)
+      GameTooltip:Show()
+    end)
+    hit:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    label:SetText(L[control.label] .. " |cff9a93ad(?)|r")
+  end
   local right = CARD_W - 12
   local widget
 
