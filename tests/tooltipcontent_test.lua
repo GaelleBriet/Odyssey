@@ -111,3 +111,47 @@ test("max level replaces progress with a level-cap subtitle", function()
   eq(c.subtitle, "Max level")
   eq(flat(c), { { "XP per hour=10,700" }, { "Time played=1d 5h" } })
 end)
+
+local function repSnap()
+  return {
+    none = false, name = "Orgrimmar", standing = 5, standingLabel = "Friendly",
+    current = 1500, max = 6000, percent = 25, remaining = 4500, toExalted = 37500, isMax = false,
+    session = { gained = 300, seconds = 1800, perHour = 600, timeToNext = 27000 }, lastGain = 25,
+  }
+end
+local repSettings = { tooltip = { progress = true, session = true } }
+
+test("reputation tooltip: default view", function()
+  local c = TC.buildRep(repSnap(), repSettings, opts, L, false)
+  eq(c.title, "Orgrimmar")
+  eq(c.subtitle, "Friendly")
+  eq(flat(c), {
+    { "Progress=25%", "Standing=1,500 / 6,000", "Remaining=4,500" },
+    { "Rep per hour=600", "Time to next standing=7h 30m" },
+  })
+  eq(c.hint, "Hold Shift for details")
+end)
+
+test("reputation tooltip: detailed view", function()
+  local c = TC.buildRep(repSnap(), repSettings, opts, L, true)
+  eq(flat(c), {
+    { "Progress=25%", "Standing=1,500 / 6,000", "Remaining=4,500", "To Exalted=37,500" },
+    { "Rep per hour=600", "Time to next standing=7h 30m", "Reputation gained=+300", "Duration=30m 00s", "Last gain=+25" },
+  })
+end)
+
+test("reputation tooltip: no watched faction, and blocks switched off", function()
+  local c = TC.buildRep({ none = true, session = { gained = 0, seconds = 0 } }, repSettings, opts, L, false)
+  eq(c.title, "No watched faction")
+  eq(c.groups, {})
+  local off = TC.buildRep(repSnap(), { tooltip = { progress = false, session = false } }, opts, L, true)
+  eq(off.groups, {})
+end)
+
+test("reputation tooltip: exalted has no remaining lines", function()
+  local s = repSnap()
+  s.isMax, s.remaining, s.toExalted, s.standingLabel = true, 0, 0, "Exalted"
+  s.session.timeToNext = nil
+  local c = TC.buildRep(s, repSettings, opts, L, true)
+  eq(flat(c)[1], { "Progress=25%", "Standing=1,500 / 6,000" })
+end)

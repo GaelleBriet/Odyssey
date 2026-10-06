@@ -94,3 +94,52 @@ function TooltipContent.build(snap, settings, store, opts, L, detailed)
   if not detailed then content.hint = L["Hold Shift for details"] end
   return content
 end
+
+-- The reputation bar's tooltip, same shape as the XP one.
+-- settings.tooltip = { progress, session }.
+function TooltipContent.buildRep(snap, settings, opts, L, detailed)
+  local show = settings.tooltip
+  local function num(n) return Calc.formatNumber(n, opts.number) end
+  local function dur(s) return Calc.formatDuration(s, opts.units) end
+  local function pct(p) return string.format("%d%%", math.floor(p + 0.5)) end
+  local function signed(n) return (n > 0 and "+" or "") .. num(n) end
+
+  if snap.none then
+    return { title = L["No watched faction"], groups = {}, hint = nil }
+  end
+
+  local groups = {}
+  local function group()
+    local g = {}
+    return g, function(label, value, color) g[#g + 1] = { label = label, value = value, color = color } end
+  end
+  local function keep(g) if #g > 0 then groups[#groups + 1] = g end end
+
+  if show.progress then
+    local g, add = group()
+    add(L["Progress"], pct(snap.percent))
+    add(L["Standing"], num(snap.current) .. " / " .. num(snap.max))
+    if not snap.isMax then add(L["Remaining"], num(snap.remaining)) end
+    if detailed and snap.toExalted > 0 then add(L["To Exalted"], num(snap.toExalted)) end
+    keep(g)
+  end
+
+  if show.session then
+    local g, add = group()
+    if snap.session.perHour then add(L["Rep per hour"], num(snap.session.perHour)) end
+    if snap.session.timeToNext then add(L["Time to next standing"], dur(snap.session.timeToNext)) end
+    if detailed then
+      add(L["Reputation gained"], signed(snap.session.gained))
+      add(L["Duration"], dur(snap.session.seconds))
+      if snap.lastGain then add(L["Last gain"], signed(snap.lastGain)) end
+    end
+    keep(g)
+  end
+
+  return {
+    title = snap.name,
+    subtitle = snap.standingLabel,
+    groups = groups,
+    hint = (not detailed) and L["Hold Shift for details"] or nil,
+  }
+end

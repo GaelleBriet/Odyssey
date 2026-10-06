@@ -56,3 +56,37 @@ end)
 test("an unknown key renders as an empty string", function()
   eq(Texts.render("bogus", snap(), opts, L), "")
 end)
+
+local function repSnap()
+  return {
+    none = false, name = "Orgrimmar", standing = 5, standingLabel = "Friendly",
+    current = 1500, max = 6000, percent = 25, remaining = 4500, toExalted = 37500, isMax = false,
+    session = { gained = 300, seconds = 1800, perHour = 600, timeToNext = 27000 }, lastGain = 25,
+  }
+end
+
+test("reputation keys are listed apart from the XP keys", function()
+  eq(Texts.REP_KEYS[1], "none")
+  for _, key in ipairs(Texts.REP_KEYS) do eq(type(Texts.render(key, repSnap(), opts, L)), "string") end
+end)
+
+test("reputation texts", function()
+  eq(Texts.render("faction", repSnap(), opts, L), "Orgrimmar")
+  eq(Texts.render("standing", repSnap(), opts, L), "Friendly")
+  eq(Texts.render("rep_current_max", repSnap(), opts, L), "1,500 / 6,000")
+  eq(Texts.render("rep_current_max_percent", repSnap(), opts, L), "1,500 / 6,000 (25%)")
+  eq(Texts.render("rep_percent", repSnap(), opts, L), "25.0%")
+  eq(Texts.render("rep_remaining", repSnap(), opts, L), "4,500 remaining")
+  eq(Texts.render("to_exalted", repSnap(), opts, L), "37,500 to Exalted")
+  eq(Texts.render("rep_per_hour", repSnap(), opts, L), "600 rep/h")
+end)
+
+test("reputation texts without data are empty", function()
+  local s = repSnap()
+  s.toExalted, s.session.perHour = 0, nil
+  eq(Texts.render("to_exalted", s, opts, L), "")
+  eq(Texts.render("rep_per_hour", s, opts, L), "")
+  local none = { none = true, percent = 0, current = 0, max = 0, remaining = 0, toExalted = 0, session = { gained = 0 } }
+  eq(Texts.render("faction", none, opts, L), "")
+  eq(Texts.render("rep_current_max", none, opts, L), "")
+end)

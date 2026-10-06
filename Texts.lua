@@ -61,6 +61,39 @@ function renderers.quests(s, o, L)
   return L["+%s from quests"]:format(Calc.formatNumber(s.quests.total, o.number))
 end
 
+-- Reputation bar texts (the snapshot comes from Sources/Reputation.lua).
+Texts.REP_KEYS = {
+  "none", "faction", "standing", "rep_current_max", "rep_current_max_percent",
+  "rep_percent", "rep_remaining", "to_exalted", "rep_per_hour",
+}
+
+local rep = {}
+function rep.faction(s) return s.name end
+function rep.standing(s) return s.standingLabel end
+function rep.rep_current_max(s, o)
+  return Calc.formatNumber(s.current, o.number) .. " / " .. Calc.formatNumber(s.max, o.number)
+end
+function rep.rep_current_max_percent(s, o) return rep.rep_current_max(s, o) .. " (" .. pct(s.percent) .. ")" end
+function rep.rep_percent(s) return string.format("%.1f%%", s.percent) end
+function rep.rep_remaining(s, o, L)
+  if s.isMax then return "" end
+  return L["%s remaining"]:format(Calc.formatNumber(s.remaining, o.number))
+end
+function rep.to_exalted(s, o, L)
+  if s.toExalted <= 0 then return "" end
+  return L["%s to Exalted"]:format(Calc.formatNumber(s.toExalted, o.number))
+end
+function rep.rep_per_hour(s, o, L)
+  if not s.session.perHour then return "" end
+  return L["%s rep/h"]:format(Calc.formatNumber(s.session.perHour, o.number))
+end
+for key, fn in pairs(rep) do
+  renderers[key] = function(s, o, L)
+    if s.none then return "" end
+    return fn(s, o, L) or ""
+  end
+end
+
 function Texts.render(key, snap, opts, L)
   local fn = renderers[key]
   if not fn then return "" end
