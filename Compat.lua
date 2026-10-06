@@ -88,10 +88,25 @@ function Compat.isKillXPMessage(msg)
   return not msg:find(formatToPattern(fmt))
 end
 
--- The native XP bar is hidden by transparency only (no replaced functions, no taint).
+-- The native XP bar is hidden with Hide (no invisible frame left catching the mouse) and kept
+-- hidden if the game shows it again; it is shown back only if Odyssey hid it. No Blizzard
+-- function is replaced (no taint): the OnShow hook only hides it again.
+local nativeHidden, hooked = false, {}
+
 function Compat.setNativeXPBarHidden(hidden)
   local frame = MainMenuExpBar or StatusTrackingBarManager
-  if frame and frame.SetAlpha then frame:SetAlpha(hidden and 0 or 1) end
+  if not frame or not frame.Hide then return end
+  if hidden then
+    if not hooked[frame] and frame.HookScript then
+      frame:HookScript("OnShow", function(self) if nativeHidden then self:Hide() end end)
+      hooked[frame] = true
+    end
+    nativeHidden = true
+    if frame:IsShown() then frame:Hide() end
+  elseif nativeHidden then
+    nativeHidden = false
+    frame:Show()
+  end
 end
 
 -- ---------------------------------------------------------------- reputation

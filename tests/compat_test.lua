@@ -105,17 +105,40 @@ end)
 test("hiding the native bar tolerates missing frames", function()
   withGlobals({ MainMenuExpBar = false, StatusTrackingBarManager = false }, function()
     Compat.setNativeXPBarHidden(true)
+    Compat.setNativeXPBarHidden(false)
   end)
 end)
 
-test("hiding the native bar sets its alpha", function()
-  local alpha
-  local frame = { SetAlpha = function(_, a) alpha = a end }
-  withGlobals({ MainMenuExpBar = frame }, function()
+local function fakeNative()
+  local f = { shown = true, calls = {} }
+  function f:Hide() self.shown = false; self.calls[#self.calls + 1] = "Hide" end
+  function f:Show() self.shown = true; self.calls[#self.calls + 1] = "Show" end
+  function f:IsShown() return self.shown end
+  function f:HookScript(event, fn) self.onShow = fn end
+  return f
+end
+
+test("the native bar is hidden for real, and kept hidden if the game shows it again", function()
+  local f = fakeNative()
+  withGlobals({ MainMenuExpBar = false, StatusTrackingBarManager = f }, function()
     Compat.setNativeXPBarHidden(true)
-    eq(alpha, 0)
+    eq(f.shown, false)
+    f.shown = true
+    f.onShow(f) -- the game shows it again
+    eq(f.shown, false)
     Compat.setNativeXPBarHidden(false)
-    eq(alpha, 1)
+    eq(f.shown, true)
+    f.onShow(f)
+    eq(f.shown, true) -- no longer forced hidden
+  end)
+end)
+
+test("the native bar is never touched when Odyssey did not hide it", function()
+  local f = fakeNative()
+  withGlobals({ MainMenuExpBar = false, StatusTrackingBarManager = f }, function()
+    Compat.setNativeXPBarHidden(false)
+    Compat.setNativeXPBarHidden(false)
+    eq(f.calls, {})
   end)
 end)
 

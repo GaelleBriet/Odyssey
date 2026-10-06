@@ -313,7 +313,6 @@ end
 
 -- The settings a control edits: the account root, the XP settings, or the reputation view.
 local function target(control, bar)
-  if control.account then return OdysseyDB end
   if bar == "rep" then return Defaults.repView(ns.Settings()) end
   return ns.Settings()
 end
@@ -443,6 +442,13 @@ local function createMenu()
     row.text:SetShadowOffset(1, -1)
     menu.rows[i] = row
   end
+  -- Scroll indicator, shown when the list is longer than the menu.
+  menu.track = solid(menu, "ARTWORK", { 1, 1, 1, 0.08 })
+  menu.track:SetPoint("TOPRIGHT", -2, -4)
+  menu.track:SetPoint("BOTTOMRIGHT", -2, 4)
+  menu.track:SetWidth(3)
+  menu.thumb = solid(menu, "OVERLAY", { 0.73, 0.55, 1, 0.8 })
+  menu.thumb:SetWidth(3)
   menu:SetScript("OnMouseWheel", function(_, delta)
     menu.offset = math.max(0, math.min(#menu.items - MENU_ROWS, menu.offset - delta * 3))
     menu.render()
@@ -470,6 +476,20 @@ local function openMenu(button, control, current, onPick, bar)
   end
   local defaultFont = Fonts.resolve(Fonts.DEFAULT, nil)
   function menu.render()
+    local total = #menu.items
+    if total > MENU_ROWS then
+      local trackHeight = MENU_ROWS * ITEM_HEIGHT
+      local thumbHeight = math.max(12, trackHeight * MENU_ROWS / total)
+      menu.thumb:SetHeight(thumbHeight)
+      menu.thumb:ClearAllPoints()
+      menu.thumb:SetPoint("TOPRIGHT", menu, "TOPRIGHT", -2,
+        -4 - (trackHeight - thumbHeight) * menu.offset / (total - MENU_ROWS))
+      menu.track:Show()
+      menu.thumb:Show()
+    else
+      menu.track:Hide()
+      menu.thumb:Hide()
+    end
     for i, row in ipairs(menu.rows) do
       local item = menu.items[i + menu.offset]
       if item then
@@ -632,7 +652,7 @@ local CARD_GAP = 12
 local CARD_W = (CONTENT_W - CARD_GAP) / 2
 local ROW_H = 26
 local CARD_HEADER = 28
-local PREVIEW_BAR_H = 88
+local PREVIEW_BAR_H = 120 -- room for a 40 px bar with size-18 text above or below
 local TOOLTIP_PREVIEW_H = 420
 
 local window, widgets, refresh
@@ -647,7 +667,6 @@ local function setGradient(tex, from, to)
 end
 
 local function changed(control)
-  if control and control.account then Defaults.merge(ns.Settings(), Defaults.settings) end
   ns.Refresh() -- redraws the bars, then calls Options.Refresh for the window and previews
 end
 
@@ -788,7 +807,16 @@ local function buildRow(card, control, y, bar)
       local s = bar == "rep" and ns.Settings().rep or ns.Settings()
       local colors = barObject(bar).colors
       local start = control.part == "fill" and colors.fill.to or colors[control.part]
-      openColorPicker(start, Options.colorSession(s, control.part, start), function() changed(control) end)
+      local scheduled = false
+      openColorPicker(start, Options.colorSession(s, control.part, start), function()
+        if scheduled then return end
+        scheduled = true
+        local after = (C_Timer and C_Timer.After) or function(_, fn) fn() end
+        after(0.05, function()
+          scheduled = false
+          changed(control)
+        end)
+      end)
     end)
     widget.reset:SetScript("OnClick", function()
       if widget.enabled == false then return end
@@ -947,6 +975,7 @@ local function createWindow()
   child:SetSize(CONTENT_W, 10)
   scroll:SetScrollChild(child)
   scroll:SetScript("OnMouseWheel", function(self, delta)
+    if menu then menu:Hide() end -- the menu's button would move under it
     local max = math.max(0, child:GetHeight() - self:GetHeight())
     self:SetVerticalScroll(math.max(0, math.min(max, self:GetVerticalScroll() - delta * 40)))
   end)

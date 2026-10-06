@@ -59,9 +59,6 @@ end
 -- Re-applies settings after any change made by the options panel or a slash command.
 function ns.Refresh()
   for _, bar in ipairs({ ns.bar, ns.repBar }) do bar:ApplySettings(); bar:Update() end
-  for _, preview in pairs(ns.previewBars or {}) do
-    if preview.frame:IsShown() then preview:ApplySettings(); preview:Update() end
-  end
   if ns.Options and ns.Options.Refresh then ns.Options.Refresh() end
 end
 
@@ -70,11 +67,20 @@ end
 local after = (C_Timer and C_Timer.After) or function(_, fn) fn() end
 local suppressing = false
 
+-- Chat frames that showed /played before Odyssey muted them; only those are restored.
+local mutedFrames = {}
+
 local function setChatPlayed(enabled)
+  if enabled then
+    for _, frame in ipairs(mutedFrames) do frame:RegisterEvent("TIME_PLAYED_MSG") end
+    mutedFrames = {}
+    return
+  end
   for i = 1, (NUM_CHAT_WINDOWS or 10) do
     local frame = _G["ChatFrame" .. i]
-    if frame then
-      if enabled then frame:RegisterEvent("TIME_PLAYED_MSG") else frame:UnregisterEvent("TIME_PLAYED_MSG") end
+    if frame and (not frame.IsEventRegistered or frame:IsEventRegistered("TIME_PLAYED_MSG")) then
+      frame:UnregisterEvent("TIME_PLAYED_MSG")
+      mutedFrames[#mutedFrames + 1] = frame
     end
   end
 end
@@ -125,10 +131,12 @@ end
 function handlers.QUEST_LOG_UPDATE() scheduleQuestRefresh() end
 function handlers.UPDATE_FACTION() ns.repSource:onUpdate() end
 
-function handlers.PLAYER_ENTERING_WORLD()
+function handlers.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
   ns.source:rebase()
   ns.repSource:rebase()
-  requestPlayed()
+  -- /played only at login and /reload (not on every loading screen); older clients
+  -- without these arguments ask every time, as before.
+  if isInitialLogin or isReloadingUi or isInitialLogin == nil then requestPlayed() end
   scheduleQuestRefresh()
 end
 

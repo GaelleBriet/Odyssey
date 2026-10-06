@@ -174,7 +174,7 @@ function Tooltip.Show(anchor, bar)
 
       if row.value then
         local value = nextString()
-        style(value, size, colorFor(row.color, colors))
+        style(value, size + 1, colorFor(row.color, colors)) -- values a touch larger than labels
         value:SetText(row.value)
         value:SetPoint("TOPRIGHT", -PAD_X, y)
         rowWidth = rowWidth + GAP + value:GetStringWidth()

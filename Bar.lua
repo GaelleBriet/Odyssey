@@ -214,6 +214,8 @@ function Bar:ApplySettings()
   if not self.preview then
     f:SetScale(s.scale)
     local p = s.point
+    -- Anchored to a hidden XP bar (max level): take the XP bar's own place instead.
+    if p[2] == "OdysseyBar" and ns.bar and not ns.bar.frame:IsShown() then p = ns.Settings().point end
     f:ClearAllPoints()
     f:SetPoint(p[1], _G[p[2]] or UIParent, p[3], p[4], p[5])
   end
@@ -335,12 +337,16 @@ end
 function Bar:Layout()
   local inner = self.innerWidth
   -- The shorter segment goes on top so both stay visible as clean bands.
-  if Calc.topSegment(self.current) == "rested" then
-    self.quest:SetDrawLayer("BORDER", 0)
-    self.rested:SetDrawLayer("ARTWORK", 0)
-  else
-    self.rested:SetDrawLayer("BORDER", 0)
-    self.quest:SetDrawLayer("ARTWORK", 0)
+  local top = Calc.topSegment(self.current)
+  if top ~= self.topSegment then
+    self.topSegment = top
+    if top == "rested" then
+      self.quest:SetDrawLayer("BORDER", 0)
+      self.rested:SetDrawLayer("ARTWORK", 0)
+    else
+      self.rested:SetDrawLayer("BORDER", 0)
+      self.quest:SetDrawLayer("ARTWORK", 0)
+    end
   end
   setWidth(self.rested, self.current.rested * inner)
   setWidth(self.quest, self.current.quest * inner)
@@ -382,7 +388,14 @@ function Bar:Update()
   if not self.preview then
     local shown = self:ShouldShow(snap, s)
     if shown then self.frame:Show() else self.frame:Hide() end
-    if self.kind == "xp" then ns.Compat.setNativeXPBarHidden(s.hideNativeBar and shown) end
+    if self.kind == "xp" then
+      ns.Compat.setNativeXPBarHidden(s.hideNativeBar and shown)
+      -- The reputation bar, anchored under this one by default, moves up when this one hides.
+      if self.lastShown ~= shown then
+        self.lastShown = shown
+        if ns.repBar then ns.repBar:ApplySettings(); ns.repBar:Update() end
+      end
+    end
   end
 
   if self.kind == "rep" then
@@ -391,7 +404,12 @@ function Bar:Update()
     -- Standing colour: the game's colour for the current standing, as a gradient.
     if s.colorMode == "standing" and not snap.none then
       local c = ns.Compat.standingColor(snap.standing)
-      setGradient(self.fill, { c[1] * 0.7, c[2] * 0.7, c[3] * 0.7 }, c)
+      local from = { c[1] * 0.7, c[2] * 0.7, c[3] * 0.7 }
+      setGradient(self.fill, from, c)
+      -- The standing colour is the bar's colour everywhere: glow, tooltip strip, swatch.
+      self.colors.fill = { from = from, to = c }
+      self.colors.accent = c
+      self.glow:SetVertexColor(c[1], c[2], c[3], 0.85)
     end
   else
     self.target = Calc.barTargets(snap, s)
