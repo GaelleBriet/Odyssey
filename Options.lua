@@ -8,7 +8,7 @@ ns.Options = Options
 
 -- ------------------------------------------------------------------ model
 
-Options.ROWS = 11 -- rows per column; two columns per tab
+Options.ROWS = 12 -- rows per column; two columns per tab
 
 Options.TABS = {
   { key = "bar", label = "tab.bar" },
@@ -39,9 +39,11 @@ Options.CONTROLS = {
   { tab = "bar", key = "shadow", kind = "check", label = "Shadow" },
   { tab = "bar", key = "glow", kind = "check", label = "Glow" },
   { tab = "bar", key = "spark", kind = "check", label = "Spark" },
+  { tab = "bar", key = "showQuestSegment", kind = "check", label = "Show quest XP" },
+  { tab = "bar", key = "showRestedSegment", kind = "check", label = "Show rested XP" },
   { tab = "bar", key = "bgOpacity", kind = "slider", label = "Background opacity", min = 0, max = 1, step = 0.05, display = percent },
+  -- Bar, second column: opacity, size, visibility, behaviour
   { tab = "bar", key = "barAlpha", kind = "slider", label = "Bar opacity", min = 0.1, max = 1, step = 0.05, display = percent },
-  -- Bar, second column: size, visibility, behaviour
   { tab = "bar", key = "width", kind = "slider", label = "Width", min = 200, max = 1200, step = 10 },
   { tab = "bar", key = "height", kind = "slider", label = "Height", min = 2, max = 40, step = 1 },
   { tab = "bar", key = "scale", kind = "slider", label = "Scale", min = 0.5, max = 2, step = 0.05, display = percent },
@@ -56,8 +58,6 @@ Options.CONTROLS = {
   -- Colours
   { tab = "colors", key = "palette", kind = "menu", label = "Palette", source = "palettes" },
   { tab = "colors", key = "borderColor", kind = "menu", label = "Border color", values = { "palette", "black", "gold" }, display = named("borderColor.") },
-  { tab = "colors", key = "showQuestSegment", kind = "check", label = "Show quest XP on the bar" },
-  { tab = "colors", key = "showRestedSegment", kind = "check", label = "Show rested XP on the bar" },
   { tab = "colors", key = "colors.fill", kind = "color", label = "color.fill", part = "fill" },
   { tab = "colors", key = "colors.rested", kind = "color", label = "color.rested", part = "rested" },
   { tab = "colors", key = "colors.quest", kind = "color", label = "color.quest", part = "quest" },
