@@ -133,3 +133,12 @@ test("a lower level than recorded (character recreated) starts a fresh history",
   eq(#H.entries(s), 0)
   eq(s.current.level, 1)
 end)
+
+test("pace of a new level is compared with the other levels only", function()
+  local s = { levels = {
+    [10] = { level = 10, duration = 3600, xpMax = 3600, rate = 3600 },
+    [11] = { level = 11, duration = 1800, xpMax = 3600, rate = 7200 },
+  } }
+  near(H.paceOf(s, s.levels[11]), 100) -- 7200 vs the other level's 3600
+  eq(H.paceOf({ levels = { [10] = s.levels[10] } }, s.levels[10]), nil) -- nothing to compare with
+end)

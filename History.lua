@@ -91,6 +91,19 @@ function History.averageRate(store)
   return xp * 3600 / seconds
 end
 
+-- Pace of a just-recorded level against the player's other levels (the level itself left out).
+function History.paceOf(store, record)
+  local xp, seconds = 0, 0
+  for _, e in ipairs(History.entries(store)) do
+    if e.level ~= record.level then
+      xp = xp + e.xpMax
+      seconds = seconds + e.duration
+    end
+  end
+  if seconds <= 0 then return nil end
+  return Calc.paceDelta(record.rate, xp * 3600 / seconds)
+end
+
 function History.compare(store, currentRate)
   return Calc.paceDelta(currentRate, History.averageRate(store))
 end

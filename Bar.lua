@@ -132,7 +132,7 @@ function Bar.create(source, opts)
   f:SetScript("OnDragStop", function()
     if not self.drag then return end
     self.drag = nil
-    self.justDragged = true
+    self.dragEndedAt = GetTime()
     self.state.moving = false
     self:SavePosition()
     if ns.Guides then ns.Guides.Request(self, not self.settings().locked) end
@@ -146,12 +146,10 @@ function Bar.create(source, opts)
     if ns.Tooltip then ns.Tooltip.Hide() end
   end)
   -- Shift+click: progress into the chat box. Click on the reputation bar: reputation pane.
-  -- Right-click: a small menu. Releasing a drag is not a click.
+  -- Right-click: a small menu. Releasing a drag is not a click, whichever of OnMouseUp and
+  -- OnDragStop the client fires first.
   f:SetScript("OnMouseUp", function(_, button)
-    if self.drag or self.justDragged then
-      self.justDragged = false
-      return
-    end
+    if self.drag or (self.dragEndedAt and GetTime() - self.dragEndedAt < 0.2) then return end
     if button == "LeftButton" then
       if IsShiftKeyDown() then
         self:InsertChat()
@@ -471,7 +469,7 @@ function Bar:ShowMenu()
   if self.kind == "rep" then
     items[#items + 1] = { value = "reputation", text = L["Open reputation pane"] }
     for _, faction in ipairs(ns.Compat.factionList()) do
-      items[#items + 1] = { value = faction.index, text = L["Watch:"] .. " " .. faction.name .. (faction.watched and " •" or "") }
+      items[#items + 1] = { value = { faction = faction.name }, text = L["Watch:"] .. " " .. faction.name .. (faction.watched and " •" or "") }
     end
   end
   if not ns.Options or not ns.Options.ShowList then return end
@@ -482,10 +480,10 @@ function Bar:ShowMenu()
       self:InsertChat()
     elseif value == "reputation" then
       ns.Compat.openReputation()
-    elseif type(value) == "number" then
-      ns.Compat.watchFaction(value)
+    elseif type(value) == "table" then
+      ns.Compat.watchFactionByName(value.faction) -- by name: rows move when headers fold
     end
-  end)
+  end, true)
 end
 
 -- Tooltip content for this bar (used by Tooltip.Show).
@@ -529,10 +527,16 @@ function Bar:OnUpdate(elapsed)
   local world = ns.state or {}
   self.state.combat, self.state.instance, self.state.dead = world.combat, world.instance, world.dead
   self.state.tooltip = ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) or false
-  local mouse = (not s.locked) or (not s.clickThrough and not Visibility.blocked(s, self.state))
+  -- Click-through is ignored in mouseover mode (the bar must notice the mouse to appear).
+  local through = s.clickThrough and s.visibility ~= "mouseover"
+  local mouse = (not s.locked) or (not through and not Visibility.blocked(s, self.state))
   if mouse ~= self.mouseEnabled then
     self.mouseEnabled = mouse
     self.frame:EnableMouse(mouse)
+    if not mouse then
+      self.state.hover = false
+      if ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) then ns.Tooltip.Hide() end
+    end
   end
   local target = Visibility.alpha(s, self.state)
   if self.alpha ~= target then

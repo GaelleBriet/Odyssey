@@ -28,6 +28,6 @@ end
 -- difference with the player's own average, or nil without history.
 function Alerts.levelUpSummary(record, pace, opts, L)
   local text = L["summary.levelup"]:format(record.level + 1, Calc.formatDuration(record.duration, opts.units))
-  if pace then text = text .. " | " .. L["summary.pace"]:format(math.floor(pace + 0.5)) end
+  if pace then text = text .. " - " .. L["summary.pace"]:format(math.floor(pace + 0.5)) end
   return text
 end

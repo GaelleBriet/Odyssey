@@ -93,7 +93,7 @@ Options.CONTROLS = {
   c("bar", "visibility", "instanceMode", "menu", "In dungeons", { values = { "show", "fade", "hide" }, display = named("condition.") }),
   c("bar", "visibility", "hideWhenDead", "check", "Hide when dead"),
   c("bar", "visibility", "strata", "menu", "Layer", { values = { "BACKGROUND", "LOW", "MEDIUM", "HIGH" }, display = named("strata.") }),
-  c("bar", "visibility", "clickThrough", "check", "Click-through"),
+  c("bar", "visibility", "clickThrough", "check", "Click-through", { enabledWhen = { key = "visibility", value = "always" } }),
   c("bar", "visibility", "visibility", "menu", "Mode", { values = { "always", "mouseover" }, display = named("visibility.") }),
   c("bar", "visibility", "fadedAlpha", "slider", "Opacity when hidden", { min = 0, max = 1, step = 0.05, display = percent,
     enabledWhen = { key = "visibility", value = "mouseover" } }),
@@ -466,10 +466,11 @@ local function createMenu()
   -- Escape closes only the menu (the window stays open for the next Escape).
   menu:EnableKeyboard(true)
   menu:SetScript("OnKeyDown", function(self, key)
+    local canPropagate = self.SetPropagateKeyboardInput and not (InCombatLockdown and InCombatLockdown())
     if key == "ESCAPE" then
-      if self.SetPropagateKeyboardInput then self:SetPropagateKeyboardInput(false) end
+      if canPropagate then self:SetPropagateKeyboardInput(false) end
       self:Hide()
-    elseif self.SetPropagateKeyboardInput then
+    elseif canPropagate then
       self:SetPropagateKeyboardInput(true)
     end
   end)
@@ -538,8 +539,17 @@ function openList(button, items, current, onPick)
 end
 
 -- The bars' right-click menu reuses the dropdown list.
-function Options.ShowList(anchor, items, onPick)
+-- `atCursor`: open at the mouse (the bars may sit at the bottom of the screen).
+-- Not in combat: the menu takes keyboard input, which is restricted there.
+function Options.ShowList(anchor, items, onPick, atCursor)
+  if InCombatLockdown and InCombatLockdown() then return end
   openList(anchor, items, nil, onPick)
+  if atCursor and menu and menu:IsShown() then
+    local scale = UIParent:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    menu:ClearAllPoints()
+    menu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / scale, y / scale)
+  end
 end
 
 -- ================================================================ colour wheel

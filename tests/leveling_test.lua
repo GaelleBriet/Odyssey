@@ -26,7 +26,7 @@ end
 -- --------------------------------------------------------------- chat lines
 
 test("XP progress line for the chat", function()
-  eq(Texts.chatLine("xp", xpSnap(), opts, L), "chat.xp:20:65%:15,040:23,200:8,160 | chat.rested:4,740")
+  eq(Texts.chatLine("xp", xpSnap(), opts, L), "chat.xp:20:65%:15,040:23,200:8,160 - chat.rested:4,740")
 end)
 
 test("XP progress line without rested XP, and at max level", function()
@@ -60,7 +60,7 @@ end)
 
 test("level-up summary", function()
   local record = { level = 20, duration = 4020 }
-  eq(Alerts.levelUpSummary(record, 12.4, opts, L), "summary.levelup:21:1h 07m | summary.pace:12")
+  eq(Alerts.levelUpSummary(record, 12.4, opts, L), "summary.levelup:21:1h 07m - summary.pace:12")
   eq(Alerts.levelUpSummary(record, nil, opts, L), "summary.levelup:21:1h 07m")
 end)
 
@@ -137,4 +137,9 @@ test("backup does nothing when the main save is fine, or when there is no backup
   eq(db.chars["Realm-A"].history.levels[10], nil)
   eq(Backup.restore({ chars = {} }, {}, "Realm-A"), "ok")
   eq(Backup.restore({ chars = {} }, nil, "Realm-A"), "ok")
+end)
+
+test("chat lines never contain the | escape character", function()
+  truthy(not Texts.chatLine("xp", xpSnap(), opts, L):find("|", 1, true))
+  truthy(not Alerts.levelUpSummary({ level = 20, duration = 60 }, 5, opts, L):find("|", 1, true))
 end)

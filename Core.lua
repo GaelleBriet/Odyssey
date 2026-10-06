@@ -173,7 +173,7 @@ function handlers.ZONE_CHANGED_NEW_AREA() ns.state.instance = Compat.inInstance(
 function handlers.PLAYER_DEAD() ns.state.dead = true end
 function handlers.PLAYER_ALIVE() ns.state.dead = Compat.isDead() end
 function handlers.PLAYER_UNGHOST() ns.state.dead = Compat.isDead() end
-function handlers.PLAYER_UPDATE_RESTING() ns.bar:Update() end
+function handlers.PLAYER_UPDATE_RESTING() if ns.bar then ns.bar:Update() end end
 function handlers.PLAYER_LOGOUT() recordCharacter() end
 
 -- Logging out (camping) outside a rest area: rested XP will build four times slower.
@@ -203,7 +203,7 @@ function handlers.TIME_PLAYED_MSG(total, levelTime)
   -- A level was just completed: a short summary with the pace against the player's average.
   local alerts = ns.Settings().alerts
   if record and alerts and alerts.levelUpSummary then
-    local pace = Calc.paceDelta(record.rate, History.averageRate(store))
+    local pace = History.paceOf(store, record)
     say(Alerts.levelUpSummary(record, pace, ns.FormatOptions(), L))
   end
 end

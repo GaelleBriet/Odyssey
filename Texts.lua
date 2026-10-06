@@ -103,7 +103,8 @@ function Texts.chatLine(kind, snap, opts, L)
   end
   if snap.isMaxLevel then return L["chat.max"]:format(snap.level) end
   local line = L["chat.xp"]:format(snap.level, pct(snap.percent), num(snap.xp), num(snap.xpMax), num(snap.remaining))
-  if snap.rested > 0 then line = line .. " | " .. L["chat.rested"]:format(num(snap.rested)) end
+  -- " - ", never "|": the chat treats | as an escape code and refuses the message.
+  if snap.rested > 0 then line = line .. " - " .. L["chat.rested"]:format(num(snap.rested)) end
   return line
 end
 

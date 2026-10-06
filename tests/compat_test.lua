@@ -247,3 +247,18 @@ test("player state helpers tolerate missing APIs", function()
     eq(Compat.inInstance(), false)
   end)
 end)
+
+test("watching a faction by name finds its current row", function()
+  local watched
+  withGlobals({
+    C_Reputation = {
+      GetNumFactions = function() return 2 end,
+      GetFactionDataByIndex = function(i) return ({ { name = "Ratchet" }, { name = "Orgrimmar" } })[i] end,
+      SetWatchedFactionByIndex = function(i) watched = i end,
+    },
+  }, function()
+    eq(Compat.watchFactionByName("Orgrimmar"), true)
+    eq(watched, 2)
+    eq(Compat.watchFactionByName("Gone"), false)
+  end)
+end)

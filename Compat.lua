@@ -195,6 +195,17 @@ function Compat.factionList()
   return list
 end
 
+-- Watches a faction by name, looking up its row at click time (rows move when headers fold).
+function Compat.watchFactionByName(name)
+  for _, faction in ipairs(Compat.factionList()) do
+    if faction.name == name then
+      Compat.watchFaction(faction.index)
+      return true
+    end
+  end
+  return false
+end
+
 function Compat.watchFaction(index)
   if C_Reputation and C_Reputation.SetWatchedFactionByIndex then
     C_Reputation.SetWatchedFactionByIndex(index)
