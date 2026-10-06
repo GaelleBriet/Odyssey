@@ -334,3 +334,16 @@ test("profile actions: use, create, copy, rename, reset, delete", function()
     eq({ Options.profileAction("create", "Neuf") }, { false, "exists" })
   end)
 end)
+
+test("showing a font or texture value does not rebuild the whole list", function()
+  local fontList, textureList = ns.Fonts.list, ns.Styles.textureList
+  ns.Fonts.list = function() error("font list rebuilt") end
+  ns.Styles.textureList = function() error("texture list rebuilt") end
+  local ok, err = pcall(function()
+    eq(Options.displayValue(control("barFont"), "Cinzel"), "Cinzel")
+    eq(Options.displayValue(control("texture"), "gradient"), "texture.gradient")
+    eq(Options.displayValue(control("texture"), "Minimalist"), "Minimalist")
+  end)
+  ns.Fonts.list, ns.Styles.textureList = fontList, textureList
+  if not ok then error(err, 0) end
+end)

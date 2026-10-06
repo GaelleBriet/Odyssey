@@ -204,6 +204,12 @@ function Options.displayValue(control, value, bar)
   if control.kind == "slider" then
     return control.display and control.display(value) or tostring(value)
   end
+  -- Fonts and textures are shown by name: no need to rebuild their (long) lists.
+  if control.source == "fonts" then return tostring(value) end
+  if control.source == "textures" then
+    local own = { flat = true, gradient = true, glossy = true, smooth = true }
+    return own[value] and L["texture." .. value] or tostring(value)
+  end
   for _, item in ipairs(Options.choices(control, bar)) do
     if item.value == value then return item.text end
   end
