@@ -17,6 +17,7 @@ Compat.lua
 Sources\XP.lua
 Texts.lua
 Styles.lua
+Visibility.lua
 Fonts.lua
 TooltipContent.lua
 Bar.lua
