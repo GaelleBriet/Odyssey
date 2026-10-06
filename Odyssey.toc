@@ -15,6 +15,7 @@ Calc.lua
 History.lua
 Compat.lua
 Sources\XP.lua
+Sources\Reputation.lua
 Texts.lua
 Styles.lua
 Visibility.lua
