@@ -118,3 +118,9 @@ test("bar targets: no quest data and a full bar", function()
   eq(Calc.barTargets({ xp = 900, xpMax = 1000, rested = 500 }, { showQuestSegment = true, showRestedSegment = true }),
     { fill = 0.9, quest = 0.9, rested = 1 })
 end)
+
+test("the shorter of the rested and quest segments is drawn on top", function()
+  eq(Calc.topSegment({ fill = 0.5, quest = 0.6, rested = 0.55 }), "rested")
+  eq(Calc.topSegment({ fill = 0.5, quest = 0.6, rested = 0.8 }), "quest")
+  eq(Calc.topSegment({ fill = 0.5, quest = 0.5, rested = 0.7 }), "quest")
+end)

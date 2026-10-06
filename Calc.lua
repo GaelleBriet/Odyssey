@@ -38,6 +38,13 @@ function Calc.barTargets(snap, settings)
   }
 end
 
+-- Rested and quest segments both start at the fill: the shorter one is drawn on top so
+-- the two show as clean consecutive bands instead of a blended overlap.
+function Calc.topSegment(targets)
+  if targets.rested < targets.quest then return "rested" end
+  return "quest"
+end
+
 -- XP gained between two readings. `leveledUp` means the level went up in between;
 -- a drop in XP is also read as a level-up so that a missed level event cannot lose the gain.
 function Calc.xpDelta(oldXP, oldMax, newXP, leveledUp)

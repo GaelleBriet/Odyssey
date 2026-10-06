@@ -229,8 +229,9 @@ function Bar:ApplySettings()
   local texture = Styles.resolveTexture(s.texture, Fonts.lsm())
   for _, tex in ipairs({ self.rested, self.quest, self.fill }) do tex:SetTexture(texture) end
   setGradient(self.fill, colors.fill.from, colors.fill.to)
-  self.rested:SetVertexColor(colors.rested[1], colors.rested[2], colors.rested[3], 0.6)
-  self.quest:SetVertexColor(colors.quest[1], colors.quest[2], colors.quest[3], 0.65)
+  -- Opaque, slightly toned down: the segments never blend into each other (see Layout).
+  self.rested:SetVertexColor(colors.rested[1] * 0.85, colors.rested[2] * 0.85, colors.rested[3] * 0.85, 1)
+  self.quest:SetVertexColor(colors.quest[1] * 0.85, colors.quest[2] * 0.85, colors.quest[3] * 0.85, 1)
 
   self.gloss:ClearAllPoints()
   self.gloss:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
@@ -289,6 +290,14 @@ end
 
 function Bar:Layout()
   local inner = self.innerWidth
+  -- The shorter segment goes on top so both stay visible as clean bands.
+  if Calc.topSegment(self.current) == "rested" then
+    self.quest:SetDrawLayer("BORDER", 0)
+    self.rested:SetDrawLayer("ARTWORK", 0)
+  else
+    self.rested:SetDrawLayer("BORDER", 0)
+    self.quest:SetDrawLayer("ARTWORK", 0)
+  end
   setWidth(self.rested, self.current.rested * inner)
   setWidth(self.quest, self.current.quest * inner)
   setWidth(self.fill, self.current.fill * inner)
