@@ -18,6 +18,10 @@
 Odyssey replaces the default experience bar with one you shape to your taste, tells you everything that matters
 while you level — without drowning you in numbers — and keeps a history of your journey, level after level.
 
+<p align="center">
+  <img src="docs/screenshots/bars.png" alt="Odyssey's XP bar and reputation bar" width="860">
+</p>
+
 ## Features
 
 ### A bar that looks the way you want
@@ -33,11 +37,20 @@ while you level — without drowning you in numbers — and keeps a history of y
 - Rested XP and the XP of **quests ready to turn in** drawn right on the bar.
 
 ### A tooltip you can read at a glance
+
+<p align="center">
+  <img src="docs/screenshots/tooltip.png" alt="The XP tooltip" width="600">
+</p>
+
 - The essentials in three short groups: progress, pace, time played.
 - Hold **Shift** for everything else: quest-by-quest XP, kills to level, session, time per level and your
   **leveling history** — how long each level took, and how your current pace compares with your own average.
 
 ### A reputation bar
+
+<p align="center">
+  <img src="docs/screenshots/reputation-tooltip.png" alt="The reputation bar and its tooltip" width="440">
+</p>
 - Follows the faction you watch in the game: standing, progress, remaining, to Exalted, reputation per hour,
   time to the next standing.
 - Coloured by standing (like the game) or by your palette; its own position and settings, or the XP bar's style.
@@ -86,6 +99,10 @@ Odyssey has no required dependency.
 
 ## The settings window
 
+<p align="center">
+  <img src="docs/screenshots/settings-bar.png" alt="Settings window: the Bar section with its live preview" width="700">
+</p>
+
 Pick the bar to edit (**XP bar** / **Reputation bar**) at the top of the sidebar, then a section:
 
 - **Bar** — preset, texture, corners, border, ticks, effects, size, opacity, visibility and conditions.
@@ -96,6 +113,11 @@ Pick the bar to edit (**XP bar** / **Reputation bar**) at the top of the sidebar
 - **Profiles** — the profile this character uses, and profile management.
 
 Options marked **(?)** explain themselves when you hover their name.
+
+<p align="center">
+  <img src="docs/screenshots/settings-tooltip.png" alt="Tooltip section with the detailed preview" width="420">
+  <img src="docs/screenshots/settings-reputation.png" alt="Reputation tooltip settings, style linked to the XP bar" width="420">
+</p>
 
 ## FAQ
 
