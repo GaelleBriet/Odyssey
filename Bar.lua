@@ -1,6 +1,6 @@
 local ADDON, ns = ...
-local Calc, Texts, Styles, Palettes, Fonts, Visibility, TooltipContent =
-  ns.Calc, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts, ns.Visibility, ns.TooltipContent
+local Calc, Texts, Styles, Palettes, Fonts, Visibility, TooltipContent, Alerts =
+  ns.Calc, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts, ns.Visibility, ns.TooltipContent, ns.Alerts
 
 local Bar = {}
 Bar.__index = Bar
@@ -132,6 +132,7 @@ function Bar.create(source, opts)
   f:SetScript("OnDragStop", function()
     if not self.drag then return end
     self.drag = nil
+    self.justDragged = true
     self.state.moving = false
     self:SavePosition()
     if ns.Guides then ns.Guides.Request(self, not self.settings().locked) end
@@ -144,8 +145,22 @@ function Bar.create(source, opts)
     self.state.hover = false
     if ns.Tooltip then ns.Tooltip.Hide() end
   end)
+  -- Shift+click: progress into the chat box. Click on the reputation bar: reputation pane.
+  -- Right-click: a small menu. Releasing a drag is not a click.
   f:SetScript("OnMouseUp", function(_, button)
-    if button == "RightButton" and ns.OpenOptions then ns.OpenOptions() end
+    if self.drag or self.justDragged then
+      self.justDragged = false
+      return
+    end
+    if button == "LeftButton" then
+      if IsShiftKeyDown() then
+        self:InsertChat()
+      elseif self.kind == "rep" then
+        ns.Compat.openReputation()
+      end
+    elseif button == "RightButton" then
+      self:ShowMenu()
+    end
   end)
   end
   f:SetScript("OnUpdate", function(_, elapsed) self:OnUpdate(elapsed) end)
@@ -211,6 +226,7 @@ function Bar:ApplySettings()
   local width = self.preview and self.previewWidth or s.width
   f:SetSize(width, s.height)
   if not self.preview and ns.Guides then ns.Guides.Request(self, not s.locked) end
+  if not self.preview then f:SetFrameStrata(s.strata or "MEDIUM") end
   if not self.preview then
     f:SetScale(s.scale)
     local p = s.point
@@ -413,6 +429,12 @@ function Bar:Update()
     end
   else
     self.target = Calc.barTargets(snap, s)
+    -- Turning in the completed quests would level up: the quest band pulses.
+    self.questsPulse = s.alerts and s.alerts.questsReady and s.showQuestSegment and Alerts.questsWouldLevel(snap)
+    -- Rested XP grows fast in a rest area: its band is drawn lighter there.
+    local r = self.colors.rested
+    local k = snap.resting and 0.35 or 0
+    self.rested:SetVertexColor((r[1] + (1 - r[1]) * k) * 0.85, (r[2] + (1 - r[2]) * k) * 0.85, (r[3] + (1 - r[3]) * k) * 0.85, 1)
   end
   -- Snap back after a level-up (or a new standing) instead of sliding backwards.
   if self.target.fill < self.current.fill then self.current.fill = self.target.fill end
@@ -434,13 +456,47 @@ function Bar:Update()
   self:Layout()
 end
 
+function Bar:InsertChat()
+  local s = self.settings()
+  local line = Texts.chatLine(self.kind, self.source:Get(), ns.FormatOptions(s), ns.L)
+  if line then ns.Compat.insertChat(line) end
+end
+
+function Bar:ShowMenu()
+  local L = ns.L
+  local items = {
+    { value = "settings", text = L["Odyssey settings"] },
+    { value = "chat", text = L["Insert into chat"] },
+  }
+  if self.kind == "rep" then
+    items[#items + 1] = { value = "reputation", text = L["Open reputation pane"] }
+    for _, faction in ipairs(ns.Compat.factionList()) do
+      items[#items + 1] = { value = faction.index, text = L["Watch:"] .. " " .. faction.name .. (faction.watched and " •" or "") }
+    end
+  end
+  if not ns.Options or not ns.Options.ShowList then return end
+  ns.Options.ShowList(self.frame, items, function(value)
+    if value == "settings" then
+      if ns.OpenOptions then ns.OpenOptions() end
+    elseif value == "chat" then
+      self:InsertChat()
+    elseif value == "reputation" then
+      ns.Compat.openReputation()
+    elseif type(value) == "number" then
+      ns.Compat.watchFaction(value)
+    end
+  end)
+end
+
 -- Tooltip content for this bar (used by Tooltip.Show).
 function Bar:TooltipContent(detailed)
   local s = self.settings()
   if self.kind == "rep" then
     return TooltipContent.buildRep(self.source:Get(), s, ns.FormatOptions(s), ns.L, detailed)
   end
-  return TooltipContent.build(self.source:Get(), s, ns.CharData().history, ns.FormatOptions(s), ns.L, detailed)
+  local alts = OdysseyDB and OdysseyDB.alts and ns.Characters.list(OdysseyDB.alts, time(), ns.CharKey()) or nil
+  return TooltipContent.build(self.source:Get(), s, ns.CharData().history, ns.FormatOptions(s), ns.L, detailed,
+    { alts = alts })
 end
 
 function Bar:OnUpdate(elapsed)
@@ -457,12 +513,28 @@ function Bar:OnUpdate(elapsed)
   end
   if moved then self:Layout() end
 
+  if self.questsPulse then
+    self.quest:SetAlpha(0.65 + 0.35 * math.sin(GetTime() * 4))
+    self.questAlphaChanged = true
+  elseif self.questAlphaChanged then
+    self.quest:SetAlpha(1)
+    self.questAlphaChanged = false
+  end
+
   if self.preview then return end
   if self.drag then self:DragStep() end
 
-  -- Mouseover visibility: fade toward the target opacity.
+  -- Visibility: conditions (combat, instance, death), mouseover, then fade toward the target.
+  local s = self.settings()
+  local world = ns.state or {}
+  self.state.combat, self.state.instance, self.state.dead = world.combat, world.instance, world.dead
   self.state.tooltip = ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) or false
-  local target = Visibility.alpha(self.settings(), self.state)
+  local mouse = (not s.locked) or (not s.clickThrough and not Visibility.blocked(s, self.state))
+  if mouse ~= self.mouseEnabled then
+    self.mouseEnabled = mouse
+    self.frame:EnableMouse(mouse)
+  end
+  local target = Visibility.alpha(s, self.state)
   if self.alpha ~= target then
     self.alpha = Visibility.step(self.alpha, target, elapsed)
     self.frame:SetAlpha(self.alpha)

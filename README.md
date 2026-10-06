@@ -17,6 +17,15 @@
   (Nunito, Barlow Condensed, Cinzel, Inter) and every font other addons share through LibSharedMedia.
 - A **clean tooltip**: the essentials in three short groups; hold **Shift** for the details
   (quest-by-quest XP, kills to level, session, time per level, leveling history).
+- **Clicks**: Shift+click a bar to put your progress in the chat box; click the reputation bar to open the
+  reputation pane; right-click for a menu (settings, watched faction).
+- **Leveling alerts**: "turning in your quests will level you up", a level-up summary with your pace,
+  and a reminder when you log out outside a rest area.
+- **Rested planner**: rested band lighter in a rest area, time until rested XP is full, and your other
+  characters' estimated rested XP (hold Shift on the tooltip).
+- **Visibility conditions**: show, fade or hide each bar in combat or in dungeons, hide when dead,
+  choose its layer, make it click-through.
+- A per-character backup of the leveling history, restored automatically if the main save loses it.
 - **Profiles**: every character uses a named profile (XP and reputation settings); create, copy, rename,
   reset and delete them from the settings window.
 - A **leveling history**: how long each level took and how your current pace compares with your own average.

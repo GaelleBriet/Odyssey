@@ -1,5 +1,6 @@
 local ADDON, ns = ...
 local Defaults, Compat, History, Profiles = ns.Defaults, ns.Compat, ns.History, ns.Profiles
+local Alerts, Characters, Backup, Calc = ns.Alerts, ns.Characters, ns.Backup, ns.Calc
 local L = ns.L
 
 -- ---------------------------------------------------------------- saved data
@@ -119,6 +120,41 @@ end
 
 local handlers = {}
 
+local function say(text) print("|cff9966ffOdyssey|r: " .. text) end
+
+-- World state read by the bars' visibility conditions.
+ns.state = { combat = false, instance = false, dead = false }
+
+local function updateWorldState()
+  ns.state.combat = Compat.inCombat()
+  ns.state.instance = Compat.inInstance()
+  ns.state.dead = Compat.isDead()
+end
+
+local questAlerts = Alerts.newTracker()
+
+-- "Turning in your quests will level you up": once per level.
+local function checkQuestAlert()
+  local alerts = ns.Settings().alerts
+  if alerts and alerts.questsReady and questAlerts:questsReady(ns.source:Get()) then
+    say(L["alert.questsReady"])
+  end
+end
+
+-- At logout: remember this character for the alts list and back up its history.
+local function recordCharacter()
+  local _, class = UnitClass("player")
+  Characters.record(OdysseyDB.alts, ns.CharKey(), {
+    name = UnitName("player"), class = class, level = UnitLevel("player"),
+    rested = GetXPExhaustion() or 0, xpMax = UnitXPMax("player"),
+    resting = Compat.isResting(), maxLevel = Compat.isMaxLevel(),
+  }, time())
+  Backup.save(OdysseyCharDB, {
+    history = ns.CharData().history,
+    profile = Profiles.activeName(OdysseyDB, ns.CharKey()),
+  })
+end
+
 function handlers.PLAYER_XP_UPDATE() ns.source:onXPUpdate() end
 function handlers.UPDATE_EXHAUSTION() ns.source:onRestedUpdate() end
 function handlers.CHAT_MSG_COMBAT_XP_GAIN(msg)
@@ -131,7 +167,25 @@ end
 function handlers.QUEST_LOG_UPDATE() scheduleQuestRefresh() end
 function handlers.UPDATE_FACTION() ns.repSource:onUpdate() end
 
+function handlers.PLAYER_REGEN_DISABLED() ns.state.combat = true end
+function handlers.PLAYER_REGEN_ENABLED() ns.state.combat = false end
+function handlers.ZONE_CHANGED_NEW_AREA() ns.state.instance = Compat.inInstance() end
+function handlers.PLAYER_DEAD() ns.state.dead = true end
+function handlers.PLAYER_ALIVE() ns.state.dead = Compat.isDead() end
+function handlers.PLAYER_UNGHOST() ns.state.dead = Compat.isDead() end
+function handlers.PLAYER_UPDATE_RESTING() ns.bar:Update() end
+function handlers.PLAYER_LOGOUT() recordCharacter() end
+
+-- Logging out (camping) outside a rest area: rested XP will build four times slower.
+function handlers.PLAYER_CAMPING()
+  local alerts = ns.Settings().alerts
+  if alerts and alerts.restReminder and not Compat.isResting() and not Compat.isMaxLevel() then
+    say(L["alert.restReminder"])
+  end
+end
+
 function handlers.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
+  updateWorldState()
   ns.source:rebase()
   ns.repSource:rebase()
   -- /played only at login and /reload (not on every loading screen); older clients
@@ -143,8 +197,15 @@ end
 function handlers.TIME_PLAYED_MSG(total, levelTime)
   ns.source:onPlayed(total, levelTime)
   -- The source's level is synced from PLAYER_LEVEL_UP, so it is right even when UnitLevel lags.
-  History.onPlayed(ns.CharData().history, ns.source.level, total, levelTime, UnitXPMax("player"), time())
+  local store = ns.CharData().history
+  local record = History.onPlayed(store, ns.source.level, total, levelTime, UnitXPMax("player"), time())
   restoreChatPlayed()
+  -- A level was just completed: a short summary with the pace against the player's average.
+  local alerts = ns.Settings().alerts
+  if record and alerts and alerts.levelUpSummary then
+    local pace = Calc.paceDelta(record.rate, History.averageRate(store))
+    say(Alerts.levelUpSummary(record, pace, ns.FormatOptions(), L))
+  end
 end
 
 local frame = CreateFrame("Frame")
@@ -154,11 +215,14 @@ frame:SetScript("OnEvent", function(_, event, ...)
     if ... ~= ADDON then return end
     frame:UnregisterEvent("ADDON_LOADED")
     if type(OdysseyDB) ~= "table" then OdysseyDB = {} end
+    if type(OdysseyCharDB) ~= "table" then OdysseyCharDB = {} end
     Defaults.migrate(OdysseyDB, L["Default"])
     Defaults.merge(OdysseyDB, Defaults.root)
     frame:RegisterEvent("PLAYER_LOGIN")
   elseif event == "PLAYER_LOGIN" then
     frame:UnregisterEvent("PLAYER_LOGIN")
+    -- The main save lost this character's history (Forever beta bug): put the backup back.
+    if Backup.restore(OdysseyDB, OdysseyCharDB, ns.CharKey()) == "restored" then say(L["backup.restored"]) end
     ns.CharData()
     ns.Fonts.registerBundled(ns.Fonts.lsm())
     ns.source = ns.XPSource.new(Compat.xpApi())
@@ -168,7 +232,10 @@ frame:SetScript("OnEvent", function(_, event, ...)
       ns.repBar = ns.Bar.create(ns.repSource, { kind = "rep", name = "OdysseyRepBar", settings = ns.RepSettings })
     end
     if ns.Options then ns.Options.create() end
-    for name in pairs(handlers) do frame:RegisterEvent(name) end
+    -- pcall: an event this client does not know (e.g. PLAYER_CAMPING) must not stop the others.
+    for name in pairs(handlers) do pcall(frame.RegisterEvent, frame, name) end
+    ns.source:Subscribe(checkQuestAlert)
+    updateWorldState()
   else
     handlers[event](...)
   end
@@ -176,7 +243,6 @@ end)
 
 -- ------------------------------------------------------------- slash commands
 
-local function say(text) print("|cff9966ffOdyssey|r: " .. text) end
 
 local function dump()
   local snap = ns.source:Get()

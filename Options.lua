@@ -475,11 +475,18 @@ local function createMenu()
   end)
 end
 
+local openList
+
 local function openMenu(button, control, current, onPick, bar)
+  openList(button, Options.choices(control, bar), current, onPick)
+end
+
+-- A scrolling list under `button`: items = { { value, text, font?, texture? } }.
+function openList(button, items, current, onPick)
   if not menu then createMenu() end
   if menu:IsShown() and menu.owner == button then menu:Hide() return end
   menu.owner = button
-  menu.items = Options.choices(control, bar)
+  menu.items = items
   menu.offset = 0
   for i, item in ipairs(menu.items) do
     if item.value == current then menu.offset = math.max(0, math.min(#menu.items - MENU_ROWS, i - 3)) end
@@ -528,6 +535,11 @@ local function openMenu(button, control, current, onPick, bar)
   menu:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
   menu.render()
   menu:Show()
+end
+
+-- The bars' right-click menu reuses the dropdown list.
+function Options.ShowList(anchor, items, onPick)
+  openList(anchor, items, nil, onPick)
 end
 
 -- ================================================================ colour wheel
