@@ -35,6 +35,7 @@ Options.SECTIONS = {
   } },
   { key = "general", label = "section.general", cards = {
     { key = "behaviour", label = "card.behaviour" },
+    { key = "alerts", label = "card.alerts" },
     { key = "data", label = "card.data" },
     { key = "about", label = "card.about" },
   } },
@@ -88,6 +89,11 @@ Options.CONTROLS = {
 
   c("bar", "visibility", "noFaction", "menu", "No watched faction", { bars = { "rep" },
     values = { "hide", "text" }, display = named("noFaction.") }),
+  c("bar", "visibility", "combatMode", "menu", "In combat", { values = { "show", "fade", "hide" }, display = named("condition.") }),
+  c("bar", "visibility", "instanceMode", "menu", "In dungeons", { values = { "show", "fade", "hide" }, display = named("condition.") }),
+  c("bar", "visibility", "hideWhenDead", "check", "Hide when dead"),
+  c("bar", "visibility", "strata", "menu", "Layer", { values = { "BACKGROUND", "LOW", "MEDIUM", "HIGH" }, display = named("strata.") }),
+  c("bar", "visibility", "clickThrough", "check", "Click-through"),
   c("bar", "visibility", "visibility", "menu", "Mode", { values = { "always", "mouseover" }, display = named("visibility.") }),
   c("bar", "visibility", "fadedAlpha", "slider", "Opacity when hidden", { min = 0, max = 1, step = 0.05, display = percent,
     enabledWhen = { key = "visibility", value = "mouseover" } }),
@@ -131,6 +137,9 @@ Options.CONTROLS = {
 
   c("general", "behaviour", "enabled", "check", "Show the reputation bar", { bars = { "rep" } }),
   c("general", "behaviour", "locked", "check", "Lock bar"),
+  c("general", "alerts", "alerts.questsReady", "check", "Quests will level you up", { global = true }),
+  c("general", "alerts", "alerts.levelUpSummary", "check", "Level-up summary", { global = true }),
+  c("general", "alerts", "alerts.restReminder", "check", "Rest reminder at logout", { global = true }),
   c("general", "behaviour", "hideNativeBar", "check", "Hide Blizzard XP bar", { bars = { "xp" } }),
   c("general", "behaviour", "maxLevelBehavior", "menu", "At max level", { values = { "hide", "show" }, display = named("max."), bars = { "xp" } }),
 
@@ -313,6 +322,7 @@ end
 
 -- The settings a control edits: the account root, the XP settings, or the reputation view.
 local function target(control, bar)
+  if control.global then return ns.Settings() end -- profile-wide (alerts), whichever bar is shown
   if bar == "rep" then return Defaults.repView(ns.Settings()) end
   return ns.Settings()
 end

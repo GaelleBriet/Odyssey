@@ -347,3 +347,25 @@ test("showing a font or texture value does not rebuild the whole list", function
   ns.Fonts.list, ns.Styles.textureList = fontList, textureList
   if not ok then error(err, 0) end
 end)
+
+-- ------------------------------------------------------ leveling tools
+
+test("visibility conditions, strata and click-through for both bars", function()
+  for _, bar in ipairs({ "xp", "rep" }) do
+    local keys = keysFor(bar)
+    for _, key in ipairs({ "combatMode", "instanceMode", "hideWhenDead", "strata", "clickThrough" }) do
+      truthy(keys[key], bar .. " " .. key)
+    end
+  end
+  eq(control("combatMode").card, "visibility")
+  eq(Options.choices(control("combatMode"))[3], { value = "hide", text = "condition.hide" })
+  eq(Options.choices(control("strata"))[1].value, "BACKGROUND")
+end)
+
+test("alerts live in General and always edit the profile's XP settings", function()
+  local c = control("alerts.questsReady")
+  eq(c.section .. "/" .. c.card, "general/alerts")
+  eq(c.global, true)
+  truthy(control("alerts.levelUpSummary"))
+  truthy(control("alerts.restReminder"))
+end)
