@@ -17,6 +17,8 @@ Compat.lua
 Sources\XP.lua
 Texts.lua
 Styles.lua
+Fonts.lua
+TooltipContent.lua
 Bar.lua
 Tooltip.lua
 Options.lua
