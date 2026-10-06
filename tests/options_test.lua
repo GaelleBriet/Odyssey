@@ -7,51 +7,94 @@ loadAddonFile("Texts.lua", ns)
 loadAddonFile("Styles.lua", ns)
 loadAddonFile("Fonts.lua", ns)
 loadAddonFile("Options.lua", ns)
-local Options = ns.Options
+local Options, Defaults = ns.Options, ns.Defaults
 
 local function control(key)
   for _, c in ipairs(Options.CONTROLS) do if c.key == key then return c end end
 end
 
-test("every control has a known kind and a label", function()
+local function tabKeys()
+  local keys = {}
+  for _, t in ipairs(Options.TABS) do keys[t.key] = true end
+  return keys
+end
+
+test("four tabs", function()
+  local keys = {}
+  for _, t in ipairs(Options.TABS) do keys[#keys + 1] = t.key end
+  eq(keys, { "bar", "colors", "texts", "tooltip" })
+end)
+
+test("every control belongs to a tab and is a checkbox, a menu or a colour swatch", function()
+  local tabs = tabKeys()
   for _, c in ipairs(Options.CONTROLS) do
-    truthy(c.kind == "bool" or c.kind == "list" or c.kind == "menu", c.key)
+    truthy(tabs[c.tab], c.key .. " tab")
+    truthy(c.kind == "check" or c.kind == "menu" or c.kind == "color", c.key .. " kind")
     eq(type(c.label), "string")
+    if c.kind == "menu" then truthy(c.values or c.source, c.key .. " choices") end
   end
 end)
 
-test("style, palette and fonts use the scrolling menu", function()
-  for _, key in ipairs({ "style", "palette", "barFont", "tooltipFont" }) do
-    eq(control(key).kind, "menu")
+test("every tab fits in two columns", function()
+  local count = {}
+  for _, c in ipairs(Options.CONTROLS) do count[c.tab] = (count[c.tab] or 0) + 1 end
+  for _, t in ipairs(Options.TABS) do
+    truthy((count[t.key] or 0) > 0, t.key)
+    truthy(count[t.key] <= 2 * Options.ROWS, t.key .. " too long")
   end
 end)
 
-test("style menu lists the four styles with their names", function()
-  local items = Options.choices(control("style"))
-  eq(#items, 4)
-  eq(items[1], { value = "smooth", text = "style.smooth" })
+test("every customization of the spec has a control", function()
+  for _, key in ipairs({
+    "preset", "texture", "corners", "border", "borderColor", "bgOpacity", "gloss", "shadow", "glow",
+    "spark", "ticks", "textPosition", "visibility", "fadedAlpha", "palette", "barFont", "barFontSize",
+    "barFontOutline", "tooltipFont", "tooltipBgOpacity", "tooltipScale", "tooltipAnchor",
+    "colors.fill", "colors.rested", "colors.quest", "colors.bg", "colors.border", "colors.text",
+  }) do
+    truthy(control(key), key)
+  end
 end)
 
-test("palette menu lists the eleven palettes", function()
-  local items = Options.choices(control("palette"))
-  eq(#items, 11)
-  eq(items[11].value, "faction")
-  eq(items[11].text, "palette.faction")
+test("menus list presets, palettes, fonts and textures", function()
+  eq(#Options.choices(control("preset")), 4)
+  eq(Options.choices(control("preset"))[1], { value = "smooth", text = "style.smooth" })
+  eq(#Options.choices(control("palette")), 11)
+  local font = Options.choices(control("barFont"))[1]
+  eq(font.value, "Friz Quadrata")
+  eq(font.font, "Fonts\\FRIZQT__.TTF")
+  local texture = Options.choices(control("texture"))[2]
+  eq(texture.value, "gradient")
+  eq(texture.text, "texture.gradient")
+  truthy(texture.texture:find("gradient%.tga$"))
 end)
 
-test("font menu items carry their font file so each is drawn in its own face", function()
-  local items = Options.choices(control("barFont"))
-  eq(items[1].value, "Friz Quadrata")
-  eq(items[1].font, "Fonts\\FRIZQT__.TTF")
-  eq(#items, 8)
+test("value menus show readable names", function()
+  local opacity = Options.choices(control("bgOpacity"))
+  eq(opacity[#opacity], { value = 1, text = "100 %" })
+  eq(Options.choices(control("ticks"))[3], { value = 20, text = "ticks.20" })
+  eq(Options.choices(control("corners"))[1], { value = "square", text = "corners.square" })
+  eq(Options.choices(control("width"))[1].text, "240")
 end)
 
-test("outline choices are named", function()
-  local c = control("barFontOutline")
-  eq(c.values, { "NONE", "OUTLINE", "THICKOUTLINE" })
-  eq(c.display("THICKOUTLINE"), "outline.THICKOUTLINE")
+test("picking a preset writes its fields; other menus write their own key", function()
+  local s = Defaults.copy(Defaults.settings)
+  Options.applyValue(s, control("preset"), "segmented")
+  eq(s.ticks, 10)
+  eq(s.corners, "square")
+  Options.applyValue(s, control("corners"), "rounded")
+  eq(s.corners, "rounded")
+  Options.applyValue(s, control("colors.fill"), { 1, 0, 0 })
+  eq(s.colors.fill, { 1, 0, 0 })
 end)
 
-test("the old theme control is gone", function()
-  eq(control("theme"), nil)
+test("reset colours clears every override", function()
+  local s = { colors = { fill = { 1, 0, 0 }, bg = { 0, 0, 0 } } }
+  Options.resetColors(s)
+  eq(s.colors, {})
+end)
+
+test("current value of a menu is displayed by name", function()
+  local s = Defaults.copy(Defaults.settings)
+  eq(Options.displayValue(control("texture"), s.texture), "texture.smooth")
+  eq(Options.displayValue(control("preset"), nil), "Choose…")
 end)
