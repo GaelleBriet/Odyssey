@@ -28,20 +28,37 @@ def grey(v):
     return (v, v, v, 255)
 
 
-def flat(x, y):
-    return grey(255)
+def smoothstep(edge0, edge1, x):
+    t = max(0.0, min(1.0, (x - edge0) / (edge1 - edge0)))
+    return t * t * (3 - 2 * t)
 
 
-def gradient(x, y):
-    return grey(255 - int(85 * y / 15))
+def fill(x, y):
+    # Subtle vertical shading; the palette colour and gradient are applied in game.
+    return grey(255 - int(55 * y / 31))
 
 
-def glossy(x, y):
-    if y == 0:
-        return grey(255)
-    if y < 8:
-        return grey(max(225, 245 - 3 * y))
-    return grey(max(140, 195 - 6 * (y - 8)))
+def gloss(x, y):
+    # White highlight fading out over the top half.
+    a = int(90 * max(0.0, 1.0 - y / 15.0)) if y < 16 else 0
+    return (255, 255, 255, a)
+
+
+def glow(x, y):
+    # Soft rounded rectangle used as a halo behind the neon fill (additive blend).
+    ex = smoothstep(0, 16, min(x, 63 - x))
+    ey = smoothstep(0, 12, min(y, 31 - y))
+    return (255, 255, 255, int(255 * ex * ey))
+
+
+def round_mask(x, y):
+    # Pill-shaped alpha mask, 512x16 so the ends stay round on a typical 480x18 bar.
+    w, h, r = 512, 16, 8.0
+    cx = min(max(x + 0.5, r), w - r)
+    cy = h / 2.0
+    d = ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2) ** 0.5
+    a = max(0.0, min(1.0, r - d + 0.5))
+    return (255, 255, 255, int(255 * a))
 
 
 def spark(x, y):
@@ -56,9 +73,10 @@ def tipbar(x, y):
 
 
 if __name__ == "__main__":
-    write_tga("flat.tga", 128, 16, flat)
-    write_tga("gradient.tga", 128, 16, gradient)
-    write_tga("glossy.tga", 128, 16, glossy)
+    write_tga("fill.tga", 128, 32, fill)
+    write_tga("gloss.tga", 128, 32, gloss)
+    write_tga("glow.tga", 64, 32, glow)
+    write_tga("round-mask.tga", 512, 16, round_mask)
     write_tga("spark.tga", 16, 64, spark)
     write_tga("tipbar.tga", 16, 16, tipbar)
     print("textures written to", os.path.normpath(OUT))
