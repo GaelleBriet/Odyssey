@@ -1,0 +1,113 @@
+local ns = newNamespace()
+loadAddonFile("Calc.lua", ns)
+loadAddonFile("History.lua", ns)
+loadAddonFile("TooltipContent.lua", ns)
+local TC = ns.TooltipContent
+
+local L = setmetatable({}, { __index = function(_, k) return k end })
+local opts = { number = { thousands = "," }, units = { d = "d", h = "h", m = "m", s = "s" } }
+
+local function settings()
+  return {
+    questListMax = 2,
+    tooltip = { level = true, rested = true, quests = true, kills = true, session = true, played = true, history = true },
+  }
+end
+
+local function snap()
+  return {
+    level = 20, xp = 6495, xpMax = 23200, remaining = 16705, percent = 28, isMaxLevel = false,
+    rested = 4740, restedPercent = 20,
+    session = { xpGained = 3000, seconds = 1800, xpPerHour = 10700, timeToLevel = 5640 },
+    lastGain = 130, killsToLevel = 129,
+    played = { total = 104400, levelTime = 4020, averagePerLevel = 5280 },
+    quests = {
+      total = 1010, percent = 4, count = 3,
+      list = {
+        { title = "Ziz Fizziks", xp = 420, percent = 2 },
+        { title = "Serres", xp = 320, percent = 1 },
+        { title = "Ashenvale", xp = 160, percent = 1 },
+      },
+    },
+  }
+end
+
+local function store()
+  return { levels = {
+    [18] = { level = 18, duration = 3600, xpMax = 36000, rate = 36000 },
+    [19] = { level = 19, duration = 1800, xpMax = 36000, rate = 72000 },
+  } }
+end
+
+-- Flattens the groups to "label=value" strings for readable assertions.
+local function flat(content)
+  local out = {}
+  for _, group in ipairs(content.groups) do
+    local rows = {}
+    for _, row in ipairs(group) do rows[#rows + 1] = row.label .. "=" .. (row.value or "") end
+    out[#out + 1] = rows
+  end
+  return out
+end
+
+test("default view has three short groups and a Shift hint", function()
+  local c = TC.build(snap(), settings(), store(), opts, L, false)
+  eq(c.title, "Level 20")
+  eq(c.subtitle, "6,495 / 23,200")
+  eq(flat(c), {
+    { "Progress=28%", "Remaining=16,705", "Rested=4,740", "Quests ready to turn in=+1,010" },
+    { "XP per hour=10,700", "Time to level=1h 34m" },
+    { "Time played=1d 5h" },
+  })
+  eq(c.hint, "Hold Shift for details")
+end)
+
+test("values carry the colour role of their line", function()
+  local c = TC.build(snap(), settings(), store(), opts, L, false)
+  eq(c.groups[1][3].color, "rested")
+  eq(c.groups[1][4].color, "quest")
+  eq(c.groups[1][1].color, nil)
+end)
+
+test("detailed view adds quests, kills, session, level times and history", function()
+  local c = TC.build(snap(), settings(), store(), opts, L, true)
+  local f = flat(c)
+  eq(f[1], {
+    "Progress=28%", "Remaining=16,705", "Rested=4,740", "Quests ready to turn in=+1,010",
+    "Ziz Fizziks=420", "Serres=320", "… and 1 more=",
+  })
+  eq(f[2], { "Kills to level=~129", "Last gain=130" })
+  eq(f[3], { "XP per hour=10,700", "Time to level=1h 34m", "XP gained=3,000", "Duration=30m 00s" })
+  eq(f[4], { "Time played=1d 5h", "This level=1h 07m", "Average per level=1h 28m" })
+  eq(f[5][1], "Pace=-78% vs your average")
+  eq(c.groups[5][2].kind, "history")
+  eq(c.groups[5][2].label, "Level 18")
+  eq(c.groups[5][2].ratio, 1)
+  eq(c.hint, nil)
+end)
+
+test("lines and groups without data are dropped", function()
+  local s = snap()
+  s.rested, s.quests, s.played, s.killsToLevel, s.lastGain = 0, nil, nil, nil, nil
+  s.session = { xpGained = 0, seconds = 5, xpPerHour = nil, timeToLevel = nil }
+  local c = TC.build(s, settings(), { levels = {} }, opts, L, true)
+  eq(flat(c), {
+    { "Progress=28%", "Remaining=16,705" },
+    { "XP gained=0", "Duration=5s" },
+  })
+end)
+
+test("tooltip toggles hide their lines in both views", function()
+  local st = settings()
+  st.tooltip = { level = false, rested = false, quests = false, kills = false, session = false, played = false, history = false }
+  eq(TC.build(snap(), st, store(), opts, L, false).groups, {})
+  eq(TC.build(snap(), st, store(), opts, L, true).groups, {})
+end)
+
+test("max level replaces progress with a level-cap subtitle", function()
+  local s = snap()
+  s.isMaxLevel = true
+  local c = TC.build(s, settings(), store(), opts, L, false)
+  eq(c.subtitle, "Max level")
+  eq(flat(c), { { "XP per hour=10,700" }, { "Time played=1d 5h" } })
+end)
