@@ -45,3 +45,33 @@ test("addon files read only known globals", function()
   listing:close()
   eq(unknown, {})
 end)
+
+-- Every `Module.field` the addon reads from a pure module must exist once the module is
+-- loaded (a renamed or removed field otherwise only fails in game).
+test("module fields used by the addon exist", function()
+  local ns = newNamespace()
+  ns.L = setmetatable({}, { __index = function(_, k) return k end })
+  for _, file in ipairs({ "Defaults.lua", "Calc.lua", "History.lua", "Compat.lua", "Sources/XP.lua",
+    "Sources/Reputation.lua", "Texts.lua", "Styles.lua", "Visibility.lua", "Profiles.lua", "Fonts.lua",
+    "TooltipContent.lua" }) do
+    loadAddonFile(file, ns)
+  end
+  local modules = { "Calc", "Defaults", "History", "Compat", "Texts", "Styles", "Palettes", "Visibility",
+    "Profiles", "Fonts", "TooltipContent", "XPSource", "RepSource" }
+  local missing, seen = {}, {}
+  local listing = io.popen("find . -name '*.lua' -not -path './tests/*' -not -path './.git/*' -not -path './.superpowers/*'")
+  for file in listing:lines() do
+    local f = io.open(file)
+    local code = f:read("*a")
+    f:close()
+    for _, module in ipairs(modules) do
+      for field in code:gmatch("%f[%w_]" .. module .. "%.([%a_][%w_]*)") do
+        local id = module .. "." .. field
+        if field ~= "lua" and not seen[id] and ns[module][field] == nil then missing[#missing + 1] = file .. ": " .. id end
+        seen[id] = true
+      end
+    end
+  end
+  listing:close()
+  eq(missing, {})
+end)

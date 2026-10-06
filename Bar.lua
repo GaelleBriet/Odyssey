@@ -92,7 +92,6 @@ function Bar.create(source, opts)
   -- Rounded corners need mask textures, which older clients lack: the bar is then square.
   if f.CreateMaskTexture then
     self.innerMask = f:CreateMaskTexture()
-    self.innerMask:SetTexture(Styles.MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
     self.outerMask = f:CreateMaskTexture()
     self.outerMask:SetAllPoints(f)
   end
@@ -237,7 +236,8 @@ function Bar:ApplySettings()
   self.borderTex:SetAllPoints(f)
   self.borderTex:SetColorTexture(bc[1], bc[2], bc[3], 1)
   if rounded and b > 0 then
-    self.outerMask:SetTexture(Styles.RING[s.border] or Styles.RING.thin, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    local ring = Styles.maskFor(width, s.height).ring
+    self.outerMask:SetTexture(ring[s.border] or ring.thin, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
     self.borderTex:Show()
   else
     self.borderTex:Hide()
@@ -262,6 +262,9 @@ function Bar:ApplySettings()
   if self.preview then f:SetAlpha(s.barAlpha or 1) end
   self.bg:SetColorTexture(colors.bg[1], colors.bg[2], colors.bg[3], s.bgOpacity)
   if self.innerMask then
+    -- The mask whose proportions match the inner area keeps the corners round.
+    self.innerMask:SetTexture(Styles.maskFor(self.innerWidth, s.height - 2 * b).mask,
+      "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
     self.innerMask:ClearAllPoints()
     self.innerMask:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
     self.innerMask:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -b, b)

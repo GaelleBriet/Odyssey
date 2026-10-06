@@ -79,8 +79,24 @@ Styles.BORDER_SIZE = { none = 0, thin = 1, thick = 2 }
 
 Styles.GLOSS = MEDIA .. "gloss.tga"
 Styles.GLOW = MEDIA .. "glow.tga"
-Styles.MASK = MEDIA .. "round-mask.tga"
-Styles.RING = { thin = MEDIA .. "round-ring-thin.tga", thick = MEDIA .. "round-ring-thick.tga" }
+-- Rounded masks exist in several proportions (width / height = 8, 16, 32, 64); the one
+-- closest to the bar's proportions keeps the corners round instead of elliptical.
+local MASK_RATIOS = { 8, 16, 32, 64 }
+function Styles.maskFor(width, height)
+  local aspect = width / math.max(height, 1)
+  local best, bestDistance = MASK_RATIOS[1], math.huge
+  for _, ratio in ipairs(MASK_RATIOS) do
+    local distance = math.abs(math.log(aspect) - math.log(ratio))
+    if distance < bestDistance then best, bestDistance = ratio, distance end
+  end
+  return {
+    mask = MEDIA .. "round-mask-" .. best .. ".tga",
+    ring = {
+      thin = MEDIA .. "round-ring-thin-" .. best .. ".tga",
+      thick = MEDIA .. "round-ring-thick-" .. best .. ".tga",
+    },
+  }
+end
 Styles.SPARK = MEDIA .. "spark.tga"
 Styles.TIPBAR = MEDIA .. "tipbar.tga"
 

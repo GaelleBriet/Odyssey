@@ -67,28 +67,29 @@ def glow(x, y):
     return (255, 255, 255, int(255 * ex * ey))
 
 
-def round_mask(x, y):
-    # Pill-shaped alpha mask, 512x16 so the ends stay round on a typical 480x18 bar.
-    w, h, r = 512, 16, 8.0
-    cx = min(max(x + 0.5, r), w - r)
-    cy = h / 2.0
-    d = ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2) ** 0.5
-    a = max(0.0, min(1.0, r - d + 0.5))
-    return (255, 255, 255, int(255 * a))
-
-
 def pill_alpha(x, y, w, h, r):
     cx = min(max(x + 0.5, r), w - r)
     d = ((x + 0.5 - cx) ** 2 + (y + 0.5 - h / 2.0) ** 2) ** 0.5
     return max(0.0, min(1.0, r - d + 0.5))
 
 
-def ring(thickness):
+# Rounded masks come in several proportions (width = ratio x 16); the bar picks the closest
+# one so its corners stay round instead of being stretched into ellipses.
+RATIOS = (8, 16, 32, 64)
+
+
+def pill(width):
+    def pixel(x, y):
+        return (255, 255, 255, int(255 * pill_alpha(x, y, width, 16, 8.0)))
+    return pixel
+
+
+def ring(thickness, width):
     # Hollow pill: the outer pill minus a pill inset by `thickness` pixels (used as a border mask).
     def pixel(x, y):
-        outer = pill_alpha(x, y, 512, 16, 8.0)
-        inner = pill_alpha(x - thickness, y - thickness, 512 - 2 * thickness, 16 - 2 * thickness, 8.0 - thickness)
-        if x < thickness or y < thickness or x >= 512 - thickness or y >= 16 - thickness:
+        outer = pill_alpha(x, y, width, 16, 8.0)
+        inner = pill_alpha(x - thickness, y - thickness, width - 2 * thickness, 16 - 2 * thickness, 8.0 - thickness)
+        if x < thickness or y < thickness or x >= width - thickness or y >= 16 - thickness:
             inner = 0.0
         return (255, 255, 255, int(255 * max(0.0, outer - inner)))
     return pixel
@@ -112,9 +113,11 @@ if __name__ == "__main__":
     write_tga("fill.tga", 128, 32, fill)
     write_tga("gloss.tga", 128, 32, gloss)
     write_tga("glow.tga", 64, 32, glow)
-    write_tga("round-mask.tga", 512, 16, round_mask)
-    write_tga("round-ring-thin.tga", 512, 16, ring(1))
-    write_tga("round-ring-thick.tga", 512, 16, ring(2))
+    for ratio in RATIOS:
+        width = ratio * 16
+        write_tga("round-mask-%d.tga" % ratio, width, 16, pill(width))
+        write_tga("round-ring-thin-%d.tga" % ratio, width, 16, ring(1, width))
+        write_tga("round-ring-thick-%d.tga" % ratio, width, 16, ring(2, width))
     write_tga("spark.tga", 16, 64, spark)
     write_tga("tipbar.tga", 16, 16, tipbar)
     print("textures written to", os.path.normpath(OUT))

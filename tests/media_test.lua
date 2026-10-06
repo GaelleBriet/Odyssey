@@ -9,19 +9,27 @@ local function alphaAt(path, x, y)
   return data:byte(18 + (row * width + x) * 4 + 4)
 end
 
-test("rounded border rings are hollow: opaque edge, transparent middle", function()
-  for _, name in ipairs({ "round-ring-thin", "round-ring-thick" }) do
-    local path = "Media/" .. name .. ".tga"
-    eq(alphaAt(path, 256, 0), 255)
-    eq(alphaAt(path, 256, 15), 255)
-    eq(alphaAt(path, 256, 8), 0)
-    eq(alphaAt(path, 0, 0), 0) -- rounded corner
+local RATIOS = { 8, 16, 32, 64 }
+
+test("rounded border rings are hollow in every proportion", function()
+  for _, ratio in ipairs(RATIOS) do
+    local mid = ratio * 8
+    for _, weight in ipairs({ "thin", "thick" }) do
+      local path = "Media/round-ring-" .. weight .. "-" .. ratio .. ".tga"
+      eq(alphaAt(path, mid, 0), 255)
+      eq(alphaAt(path, mid, 15), 255)
+      eq(alphaAt(path, mid, 8), 0)
+      eq(alphaAt(path, 0, 0), 0) -- rounded corner
+    end
+    eq(alphaAt("Media/round-ring-thick-" .. ratio .. ".tga", mid, 1), 255)
+    eq(alphaAt("Media/round-ring-thin-" .. ratio .. ".tga", mid, 2), 0)
   end
-  eq(alphaAt("Media/round-ring-thick.tga", 256, 1), 255)
-  eq(alphaAt("Media/round-ring-thin.tga", 256, 2), 0)
 end)
 
-test("the pill mask is filled", function()
-  eq(alphaAt("Media/round-mask.tga", 256, 8), 255)
-  eq(alphaAt("Media/round-mask.tga", 0, 0), 0)
+test("the pill masks are filled in every proportion", function()
+  for _, ratio in ipairs(RATIOS) do
+    local path = "Media/round-mask-" .. ratio .. ".tga"
+    eq(alphaAt(path, ratio * 8, 8), 255)
+    eq(alphaAt(path, 0, 0), 0)
+  end
 end)

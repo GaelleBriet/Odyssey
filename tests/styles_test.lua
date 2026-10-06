@@ -134,3 +134,13 @@ test("effective colours ignore malformed overrides", function()
   eq(c.fill.to, Palettes.defs.arcane.fill.to)
   eq(c.quest, Palettes.defs.arcane.quest)
 end)
+
+test("rounded masks: the one whose proportions match the bar is chosen", function()
+  truthy(Styles.maskFor(480, 18).mask:find("round%-mask%-32%.tga$"))
+  truthy(Styles.maskFor(480, 32).mask:find("round%-mask%-16%.tga$"))
+  truthy(Styles.maskFor(1000, 16).mask:find("round%-mask%-64%.tga$"))
+  truthy(Styles.maskFor(200, 24).mask:find("round%-mask%-8%.tga$"))
+  truthy(Styles.maskFor(480, 18).ring.thin:find("round%-ring%-thin%-32%.tga$"))
+  truthy(Styles.maskFor(480, 18).ring.thick:find("round%-ring%-thick%-32%.tga$"))
+  truthy(Styles.maskFor(480, 0).mask) -- never divides by zero
+end)
