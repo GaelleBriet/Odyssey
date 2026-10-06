@@ -112,10 +112,12 @@ do
 end
 Defaults.settings.rep = Defaults.repSettings
 
--- Look settings the reputation bar takes from the XP bar while "same style" is on.
+-- Look settings the reputation bar takes from the XP bar while "same style" is on: shape,
+-- effects and fonts. Colours (palette, border colour, custom colours) always stay its own,
+-- since colour is what tells the two bars apart.
 Defaults.LINKED_KEYS = {
-  "texture", "corners", "border", "borderColor", "bgOpacity", "gloss", "shadow", "glow", "spark", "ticks",
-  "palette", "colors", "barFont", "barFontSize", "barFontOutline",
+  "texture", "corners", "border", "bgOpacity", "gloss", "shadow", "glow", "spark", "ticks",
+  "barFont", "barFontSize", "barFontOutline",
   "tooltipFont", "tooltipFontSize", "tooltipFontOutline", "tooltipBgOpacity", "tooltipScale",
 }
 local LINKED = {}

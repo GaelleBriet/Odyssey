@@ -180,7 +180,7 @@ test("linked view: the look follows the XP bar, the rest is the reputation bar's
   xp.rep.texture, xp.rep.width = "glossy", 300
   local view = D.repView(xp)
   eq(view.texture, "flat")
-  eq(view.palette, "gold")
+  eq(view.palette, xp.rep.palette) -- colours always stay the reputation bar's own
   eq(view.width, 300)
   eq(view.textLeft, "faction")
   eq(D.get(view, "tooltip.progress"), true)
@@ -206,16 +206,22 @@ end)
 test("unlinking starts from the XP bar's current look", function()
   local xp = D.copy(D.settings)
   xp.texture, xp.colors = "flat", { fill = { 1, 0, 0 } }
+  xp.barFont = "Cinzel"
   D.unlinkRep(xp)
   eq(xp.rep.linkStyle, false)
   eq(xp.rep.texture, "flat")
-  eq(xp.rep.colors, { fill = { 1, 0, 0 } })
-  xp.colors.fill[1] = 0
-  eq(xp.rep.colors.fill[1], 1)
+  eq(xp.rep.barFont, "Cinzel")
+  eq(xp.rep.colors, {}) -- colours were never linked
 end)
 
 test("the reputation view is built once per settings table", function()
   local xp = D.copy(D.settings)
   truthy(D.repView(xp) == D.repView(xp))
   truthy(D.repView(xp) ~= D.repView(D.copy(D.settings)))
+end)
+
+test("colours are never linked to the XP bar", function()
+  for _, key in ipairs(D.LINKED_KEYS) do
+    truthy(key ~= "palette" and key ~= "colors" and key ~= "borderColor", key)
+  end
 end)

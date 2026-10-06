@@ -270,3 +270,9 @@ test("unticking 'same style' copies the XP look first", function()
   Options.setCheck(view, control("enabled"), false, xp)
   eq(xp.rep.enabled, false)
 end)
+
+test("the reputation colours stay editable while its style follows the XP bar", function()
+  for _, key in ipairs({ "palette", "borderColor", "colorMode", "colors.fill", "action.resetColors" }) do
+    eq(Options.isEnabled({ linkStyle = true }, control(key), "rep"), true)
+  end
+end)
