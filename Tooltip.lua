@@ -134,6 +134,7 @@ function Tooltip.Show(anchor)
   end
 
   reset()
+  frame:SetFrameStrata("TOOLTIP")
   frame:SetScale(s.tooltipScale)
   frame.bg:SetColorTexture(0.05, 0.05, 0.07, s.tooltipBgOpacity)
   frame.strip:SetColorTexture(colors.accent[1], colors.accent[2], colors.accent[3], 1)
@@ -210,6 +211,11 @@ function Tooltip.Show(anchor)
     -- Inside the preview card of the settings window, or beside the window.
     frame:ClearAllPoints()
     if preview.inside then
+      -- Inside the settings window: below its dropdown menus, scaled to fit the card.
+      frame:SetFrameStrata("DIALOG")
+      frame:SetFrameLevel(anchor:GetFrameLevel() + 20)
+      frame:SetScale(Tooltip.fitScale(s.tooltipScale, totalWidth, -y + PAD_Y,
+        anchor:GetWidth() - 24, anchor:GetHeight() - 40))
       frame:SetPoint("TOPLEFT", anchor, "TOPLEFT", 12, -30)
     else
       frame:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 14, 0)
@@ -218,6 +224,13 @@ function Tooltip.Show(anchor)
     place(anchor)
   end
   frame:Show()
+end
+
+-- Scale for the in-window preview: the user's scale unless the tooltip would overflow the
+-- space available (width and height) in the preview card.
+function Tooltip.fitScale(desired, width, height, availWidth, availHeight)
+  if width <= 0 or height <= 0 then return desired end
+  return math.min(desired, availWidth / width, availHeight / height)
 end
 
 -- Keeps the tooltip visible next to `anchor` (the settings window) until HidePreview.

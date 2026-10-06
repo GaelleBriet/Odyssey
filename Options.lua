@@ -273,8 +273,9 @@ local function flatButton(parent, width, height, text, kind)
   hl:SetAllPoints()
   hl:SetColorTexture(1, 1, 1, 0.08)
   b.label = fontString(b, 11, C.text)
-  b.label:SetPoint("LEFT", 8, 0)
-  b.label:SetPoint("RIGHT", kind == "menu" and -16 or -8, 0)
+  local pad = width < 40 and 0 or 8
+  b.label:SetPoint("LEFT", pad, 0)
+  b.label:SetPoint("RIGHT", kind == "menu" and -16 or -pad, 0)
   b.label:SetWordWrap(false)
   if kind ~= "menu" then b.label:SetJustifyH("CENTER") end
   if kind == "menu" then
@@ -292,6 +293,7 @@ end
 
 local MENU_WIDTH, ITEM_HEIGHT, MENU_ROWS = 220, 20, 12
 local menu
+local menuButtons = {} -- every dropdown button of the window, for one-click switching
 
 local function createMenu()
   local catcher = CreateFrame("Button", nil, UIParent)
@@ -307,8 +309,14 @@ local function createMenu()
   menu:EnableMouseWheel(true)
   menu:Hide()
   menu:SetFrameLevel(catcher:GetFrameLevel() + 10)
-  -- A click anywhere outside the menu lands on the catcher and closes it.
-  catcher:SetScript("OnClick", function() menu:Hide() end)
+  -- A click anywhere outside the menu lands on the catcher and closes it; when the click
+  -- lands on another menu button of the window, that menu opens right away.
+  catcher:SetScript("OnClick", function()
+    menu:Hide()
+    for _, button in ipairs(menuButtons) do
+      if button:IsVisible() and button:IsMouseOver() then button:Click() break end
+    end
+  end)
   menu:SetScript("OnShow", function() catcher:Show() end)
   menu:SetScript("OnHide", function() catcher:Hide() end)
   local edge = solid(menu, "BACKGROUND", C.widgetEdge, -1)
@@ -342,8 +350,16 @@ local function createMenu()
     menu.offset = math.max(0, math.min(#menu.items - MENU_ROWS, menu.offset - delta * 3))
     menu.render()
   end)
-  -- Escape closes the menu like any Blizzard popup.
-  if UISpecialFrames then table.insert(UISpecialFrames, "OdysseyMenu") end
+  -- Escape closes only the menu (the window stays open for the next Escape).
+  menu:EnableKeyboard(true)
+  menu:SetScript("OnKeyDown", function(self, key)
+    if key == "ESCAPE" then
+      if self.SetPropagateKeyboardInput then self:SetPropagateKeyboardInput(false) end
+      self:Hide()
+    elseif self.SetPropagateKeyboardInput then
+      self:SetPropagateKeyboardInput(true)
+    end
+  end)
 end
 
 local function openMenu(button, control, current, onPick)
@@ -512,7 +528,7 @@ end
 
 -- ===================================================================== window
 
-local WINDOW_W, WINDOW_H = 720, 540
+local WINDOW_W, WINDOW_H = 800, 540
 local TITLE_H, SIDEBAR_W = 32, 150
 local CONTENT_W = WINDOW_W - SIDEBAR_W - 20 -- inside the scroll frame
 local CARD_GAP = 12
@@ -560,6 +576,7 @@ local function buildRow(card, control, y)
     end)
   elseif control.kind == "menu" then
     widget = flatButton(card, WIDGET_WIDTH, 20, "", "menu")
+    menuButtons[#menuButtons + 1] = widget
     widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 1)
     widget:SetScript("OnClick", function(self)
       openMenu(self, control, Options.currentValue(target(control), control), function(value)
@@ -880,7 +897,7 @@ local function registerSettingsStub()
   open:SetPoint("TOPLEFT", 16, -76)
   open:SetScript("OnClick", function()
     if SettingsPanel and SettingsPanel:IsShown() and HideUIPanel then HideUIPanel(SettingsPanel) end
-    ns.OpenOptions()
+    Options.Show()
   end)
   if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
     local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
@@ -895,12 +912,14 @@ function Options.create()
   registerSettingsStub()
 end
 
+function Options.Show()
+  if not window then return end
+  window:Show()
+  Options.Select(window.current or "bar")
+end
+
+-- /odyssey and right-click on the bar toggle the window.
 function ns.OpenOptions()
   if not window then return end
-  if window:IsShown() then
-    window:Hide()
-  else
-    window:Show()
-    Options.Select(window.current or "bar")
-  end
+  if window:IsShown() then window:Hide() else Options.Show() end
 end
