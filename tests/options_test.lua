@@ -47,7 +47,7 @@ end)
 test("every customization of the spec has a control", function()
   for _, key in ipairs({
     "preset", "texture", "corners", "border", "borderColor", "bgOpacity", "gloss", "shadow", "glow",
-    "spark", "ticks", "textPosition", "visibility", "fadedAlpha", "palette", "barFont", "barFontSize",
+    "spark", "ticks", "textPosition", "visibility", "palette", "barFont", "barFontSize",
     "barFontOutline", "tooltipFont", "tooltipBgOpacity", "tooltipScale", "tooltipAnchor",
     "colors.fill", "colors.rested", "colors.quest", "colors.bg", "colors.border", "colors.text",
   }) do
@@ -132,4 +132,27 @@ test("colour session works when the settings have no colours table yet", functio
   local session = Options.colorSession(s, "text", { 1, 1, 1 })
   session.change(0, 0, 0)
   eq(s.colors.text, { 0, 0, 0 })
+end)
+
+test("visibility is one menu: always, or mouseover with its hidden opacity", function()
+  eq(control("fadedAlpha"), nil)
+  local c = control("visibility")
+  local items = Options.choices(c)
+  eq(#items, 5)
+  eq(items[1], { value = "always", text = "visibility.always" })
+  eq(items[2], { value = 0, text = "visibility.mouseoverHidden" })
+  eq(items[4].value, 0.3)
+  eq(items[4].text, "visibility.mouseoverFaded")
+end)
+
+test("picking a visibility entry sets both fields, and the menu shows the current pair", function()
+  local c = control("visibility")
+  local s = { visibility = "always", fadedAlpha = 0 }
+  Options.applyValue(s, c, 0.15)
+  eq(s.visibility, "mouseover")
+  eq(s.fadedAlpha, 0.15)
+  eq(Options.displayValue(c, Options.currentValue(s, c)), "visibility.mouseoverFaded")
+  Options.applyValue(s, c, "always")
+  eq(s.visibility, "always")
+  eq(Options.displayValue(c, Options.currentValue(s, c)), "visibility.always")
 end)

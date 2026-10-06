@@ -21,6 +21,13 @@ local function named(prefix) return function(v) return L[prefix .. tostring(v)] 
 local function percent(v) return string.format("%d %%", math.floor(v * 100 + 0.5)) end
 local OUTLINES = { "NONE", "OUTLINE", "THICKOUTLINE" }
 
+-- One menu for both visibility fields: "always", or the opacity kept while not hovered.
+local function visibilityName(v)
+  if v == "always" then return L["visibility.always"] end
+  if v == 0 then return L["visibility.mouseoverHidden"] end
+  return L["visibility.mouseoverFaded"]:format(percent(v))
+end
+
 -- kind "check": on/off; kind "menu": dropdown from `values` (shown through `display`) or from
 -- a `source` (presets, palettes, fonts, textures); kind "color": swatch opening the colour wheel.
 -- `account = true` writes to OdysseyDB instead of the active settings.
@@ -40,8 +47,7 @@ Options.CONTROLS = {
   { tab = "bar", key = "width", kind = "menu", label = "Width", values = { 240, 320, 400, 480, 560, 640, 800, 1000 } },
   { tab = "bar", key = "height", kind = "menu", label = "Height", values = { 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 32 } },
   { tab = "bar", key = "scale", kind = "menu", label = "Scale", values = { 0.75, 0.9, 1, 1.1, 1.25, 1.5 }, display = percent },
-  { tab = "bar", key = "visibility", kind = "menu", label = "Visibility", values = { "always", "mouseover" }, display = named("visibility.") },
-  { tab = "bar", key = "fadedAlpha", kind = "menu", label = "Opacity when hidden", values = { 0, 0.15, 0.3, 0.5 }, display = percent },
+  { tab = "bar", key = "visibility", kind = "menu", label = "Visibility", values = { "always", 0, 0.15, 0.3, 0.5 }, display = visibilityName, composite = true },
   { tab = "bar", key = "maxLevelBehavior", kind = "menu", label = "At max level", values = { "hide", "show" }, display = named("max.") },
   { tab = "bar", key = "locked", kind = "check", label = "Lock bar" },
   { tab = "bar", key = "hideNativeBar", kind = "check", label = "Hide Blizzard XP bar" },
@@ -110,9 +116,23 @@ function Options.displayValue(control, value)
   return tostring(value)
 end
 
+-- The value a control currently shows (the visibility menu reads two fields).
+function Options.currentValue(t, control)
+  if control.composite then
+    return t.visibility == "mouseover" and (t.fadedAlpha or 0) or "always"
+  end
+  return Defaults.get(t, control.key)
+end
+
 -- Writes a picked value; a preset fills every bar field instead.
 function Options.applyValue(t, control, value)
-  if control.preset then
+  if control.composite then
+    if value == "always" then
+      t.visibility = "always"
+    else
+      t.visibility, t.fadedAlpha = "mouseover", value
+    end
+  elseif control.preset then
     Styles.applyPreset(t, value)
   else
     Defaults.set(t, control.key, value)
@@ -346,13 +366,27 @@ function Options.create()
   title:SetText("Odyssey")
 
   local pages, tabButtons, widgets = {}, {}, {}
+  local currentTab, previewDetailed = "bar", false
+
+  -- The settings window itself when the client has one, else our panel.
+  local function previewAnchor()
+    return (SettingsPanel and SettingsPanel:IsShown() and SettingsPanel) or panel
+  end
+  local function updatePreview()
+    if not ns.Tooltip then return end
+    if currentTab == "tooltip" and panel:IsVisible() then
+      ns.Tooltip.ShowPreview(previewAnchor(), previewDetailed)
+    else
+      ns.Tooltip.HidePreview()
+    end
+  end
 
   local function refresh()
     local s = ns.Settings()
     local colors = (ns.bar and ns.bar.colors) or Palettes.effective(s.palette, {}, s)
     for _, w in ipairs(widgets) do
       local c = w.control
-      local value = Defaults.get(target(c), c.key)
+      local value = Options.currentValue(target(c), c)
       if c.kind == "check" then
         w.widget.mark:SetShown(value and true or false)
       elseif c.kind == "menu" then
@@ -370,14 +404,17 @@ function Options.create()
     if control.account then Defaults.merge(ns.Settings(), Defaults.settings) end
     ns.Refresh()
     refresh()
+    updatePreview()
   end
 
   local function selectTab(key)
+    currentTab = key
     for k, page in pairs(pages) do page:SetShown(k == key) end
     for k, button in pairs(tabButtons) do
       if k == key then button:LockHighlight() else button:UnlockHighlight() end
     end
     if menu then menu:Hide() end
+    updatePreview()
   end
 
   for i, tab in ipairs(Options.TABS) do
@@ -420,7 +457,7 @@ function Options.create()
       widget = makeButton(page, WIDGET_WIDTH, "")
       widget:SetPoint("TOPLEFT", x + LABEL_WIDTH, y + 4)
       widget:SetScript("OnClick", function(self)
-        openMenu(self, control, Defaults.get(target(control), control.key), function(value)
+        openMenu(self, control, Options.currentValue(target(control), control), function(value)
           Options.applyValue(target(control), control, value)
           changed(control)
         end)
@@ -441,6 +478,19 @@ function Options.create()
     end
     widgets[#widgets + 1] = { control = control, widget = widget }
   end
+
+  -- "Detailed preview": show the Shift view in the preview without holding Shift (not saved).
+  local detailLabel = pages.tooltip:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  detailLabel:SetPoint("TOPLEFT", 16, TOP - Options.ROWS * ROW_HEIGHT - 10)
+  detailLabel:SetText(L["Detailed preview"])
+  local detailCheck = makeCheck(pages.tooltip)
+  detailCheck:SetPoint("LEFT", detailLabel, "RIGHT", 10, 0)
+  detailCheck.mark:Hide()
+  detailCheck:SetScript("OnClick", function()
+    previewDetailed = not previewDetailed
+    detailCheck.mark:SetShown(previewDetailed)
+    updatePreview()
+  end)
 
   local resetColors = makeButton(pages.colors, 260, L["Reset to palette colors"])
   resetColors:SetPoint("TOPLEFT", 16, TOP - Options.ROWS * ROW_HEIGHT - 10)
@@ -463,8 +513,14 @@ function Options.create()
     print("|cff9966ffOdyssey|r: " .. L["History cleared."])
   end)
 
-  panel:SetScript("OnShow", refresh)
-  panel:SetScript("OnHide", function() if menu then menu:Hide() end end)
+  panel:SetScript("OnShow", function()
+    refresh()
+    updatePreview()
+  end)
+  panel:SetScript("OnHide", function()
+    if menu then menu:Hide() end
+    if ns.Tooltip then ns.Tooltip.HidePreview() end
+  end)
   selectTab("bar")
 
   -- Register with whichever settings system this client has; otherwise float as its own window.

@@ -15,6 +15,7 @@ local MUTED = { 0.62, 0.60, 0.68 }
 local SEPARATOR = { 1, 1, 1, 0.12 }
 
 local frame, owner, shiftShown
+local preview -- { anchor, detailed } while the settings panel shows the Tooltip tab
 local followCursor -- defined with the placement code below, used by the frame's OnUpdate
 local strings, textures = {}, {}
 local usedStrings, usedTextures = 0, 0
@@ -39,7 +40,8 @@ local function createFrame()
   frame:SetScript("OnUpdate", function()
     if not owner then return end
     if Tooltip.shiftDown() ~= shiftShown then Tooltip.Show(owner) return end
-    if ns.Settings().tooltipAnchor == "cursor" then followCursor() end
+    local previewing = preview and owner == preview.anchor
+    if not previewing and ns.Settings().tooltipAnchor == "cursor" then followCursor() end
   end)
 end
 
@@ -115,11 +117,13 @@ function Tooltip.Show(anchor)
   if not frame then createFrame() end
   owner = anchor
   shiftShown = Tooltip.shiftDown()
+  local previewing = preview and anchor == preview.anchor
+  local detailed = shiftShown or (previewing and preview.detailed) or false
 
   local s = ns.Settings()
   local colors = (ns.bar and ns.bar.colors) or Palettes.colors(s.palette, {})
   local content = TooltipContent.build(ns.source:Get(), s, ns.CharData().history,
-    ns.FormatOptions(), ns.L, shiftShown)
+    ns.FormatOptions(), ns.L, detailed)
 
   local fontPath = Fonts.resolve(s.tooltipFont, Fonts.lsm())
   local size = s.tooltipFontSize
@@ -202,11 +206,35 @@ function Tooltip.Show(anchor)
     sep.tex:SetWidth(width)
   end
   frame:SetSize(totalWidth, -y + PAD_Y)
-  place(anchor)
+  if previewing then
+    -- Beside the settings window, so it can be watched while it is being tuned.
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 14, 0)
+  else
+    place(anchor)
+  end
   frame:Show()
 end
 
+-- Keeps the tooltip visible next to `anchor` (the settings window) until HidePreview.
+function Tooltip.ShowPreview(anchor, detailed)
+  preview = { anchor = anchor, detailed = detailed }
+  Tooltip.Show(anchor)
+end
+
+function Tooltip.HidePreview()
+  if not preview then return end
+  local wasPreviewing = owner == preview.anchor
+  preview = nil
+  if wasPreviewing then Tooltip.Hide() end
+end
+
 function Tooltip.Hide()
+  -- Leaving the bar while the preview is on goes back to the preview.
+  if preview and owner ~= preview.anchor then
+    Tooltip.Show(preview.anchor)
+    return
+  end
   owner = nil
   if frame then frame:Hide() end
 end
