@@ -45,7 +45,7 @@ Options.CONTROLS = {
 function Options.choices(control)
   local items = {}
   if control.source == "styles" then
-    for _, key in ipairs(Styles.list) do items[#items + 1] = { value = key, text = L["style." .. key] } end
+    for _, key in ipairs(Styles.PRESET_LIST) do items[#items + 1] = { value = key, text = L["style." .. key] } end
   elseif control.source == "palettes" then
     for _, key in ipairs(Palettes.list) do items[#items + 1] = { value = key, text = L["palette." .. key] } end
   elseif control.source == "fonts" then

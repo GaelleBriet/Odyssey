@@ -4,30 +4,68 @@ local Styles, Palettes = ns.Styles, ns.Palettes
 
 local function isColor(c) return type(c) == "table" and #c == 3 end
 
-test("the four styles are defined", function()
-  eq(Styles.list, { "smooth", "segmented", "neon", "thin" })
-  for _, key in ipairs(Styles.list) do
-    local def = Styles.defs[key]
-    truthy(def, key)
-    truthy(def.texture:find("%.tga$"), key)
-    eq(type(def.border), "number")
-    eq(type(def.height), "number")
-    truthy(def.textPosition == "inside" or def.textPosition == "above", key)
-    for _, flag in ipairs({ "gloss", "ticks", "glow", "spark", "rounded", "shadow" }) do
-      eq(type(def[flag]), "boolean")
-    end
+local PRESET_FIELDS = {
+  texture = "string", corners = "string", border = "string", textPosition = "string",
+  gloss = "boolean", shadow = "boolean", glow = "boolean", spark = "boolean",
+  ticks = "number", height = "number",
+}
+
+test("the four presets set every bar field", function()
+  eq(Styles.PRESET_LIST, { "smooth", "segmented", "neon", "thin" })
+  for _, key in ipairs(Styles.PRESET_LIST) do
+    local preset = Styles.PRESETS[key]
+    truthy(preset, key)
+    for field, kind in pairs(PRESET_FIELDS) do eq(type(preset[field]), kind) end
   end
 end)
 
-test("style traits match the validated mockups", function()
-  eq(Styles.defs.segmented.ticks, true)
-  eq(Styles.defs.neon.glow, true)
-  eq(Styles.defs.smooth.rounded, true)
-  eq(Styles.defs.smooth.gloss, true)
-  eq(Styles.defs.smooth.shadow, true)
-  eq(Styles.defs.thin.textPosition, "above")
-  eq(Styles.defs.thin.height, 4)
-  eq(Styles.defs.thin.spark, false)
+test("presets match the validated mockups", function()
+  local P = Styles.PRESETS
+  eq(P.smooth.corners, "rounded")
+  eq(P.smooth.gloss, true)
+  eq(P.smooth.shadow, true)
+  eq(P.segmented.ticks, 10)
+  eq(P.neon.glow, true)
+  eq(P.thin.textPosition, "above")
+  eq(P.thin.height, 4)
+  eq(P.thin.border, "none")
+end)
+
+test("applyPreset writes the preset fields and nothing else", function()
+  local s = { width = 640, palette = "gold", corners = "rounded", ticks = 20 }
+  Styles.applyPreset(s, "segmented")
+  eq(s.width, 640)
+  eq(s.palette, "gold")
+  eq(s.corners, "square")
+  eq(s.ticks, 10)
+  eq(s.height, 16)
+  Styles.applyPreset(s, "bogus")
+  eq(s.ticks, 10)
+end)
+
+local function fakeLSM(textures)
+  local lsm = { textures = textures }
+  function lsm:List(kind) local n = {} for k in pairs(self.textures) do n[#n + 1] = k end table.sort(n) return n end
+  function lsm:Fetch(kind, name) return self.textures[name] end
+  return lsm
+end
+
+test("texture list: Odyssey textures first, then LibSharedMedia without duplicates", function()
+  local list = Styles.textureList(fakeLSM({ ["Minimalist"] = "Interface\\X\\min", ["flat"] = "dup" }))
+  local names = {}
+  for _, t in ipairs(list) do names[#names + 1] = t.value end
+  eq(names, { "flat", "gradient", "glossy", "smooth", "Minimalist" })
+  eq(list[1].source, "odyssey")
+  eq(list[5].source, "shared")
+  eq(#Styles.textureList(nil), 4)
+end)
+
+test("resolveTexture: own, shared, and unknown falls back to smooth", function()
+  local lsm = fakeLSM({ ["Minimalist"] = "Interface\\X\\min" })
+  truthy(Styles.resolveTexture("glossy", nil):find("glossy%.tga$"))
+  eq(Styles.resolveTexture("Minimalist", lsm), "Interface\\X\\min")
+  truthy(Styles.resolveTexture("Gone", lsm):find("fill%.tga$"))
+  truthy(Styles.resolveTexture(nil, nil):find("fill%.tga$"))
 end)
 
 test("the eleven palettes are complete", function()

@@ -4,29 +4,78 @@ local MEDIA = "Interface\\AddOns\\" .. ADDON .. "\\Media\\"
 
 -- ------------------------------------------------------------------- styles
 
-local Styles = { list = { "smooth", "segmented", "neon", "thin" } }
+local Styles = {}
 ns.Styles = Styles
 
--- height: the height applied when the style is picked in the settings.
--- textPosition: "inside" the bar, or "above" it for the thin line.
-Styles.defs = {
+-- Odyssey's own fill textures; LibSharedMedia "statusbar" textures come after them.
+local TEXTURES = {
+  { value = "flat", path = MEDIA .. "flat.tga" },
+  { value = "gradient", path = MEDIA .. "gradient.tga" },
+  { value = "glossy", path = MEDIA .. "glossy.tga" },
+  { value = "smooth", path = MEDIA .. "fill.tga" },
+}
+Styles.DEFAULT_TEXTURE = "smooth"
+
+function Styles.textureList(lsm)
+  local list, seen = {}, {}
+  for _, t in ipairs(TEXTURES) do
+    list[#list + 1] = { value = t.value, path = t.path, source = "odyssey" }
+    seen[t.value] = true
+  end
+  if lsm then
+    for _, name in ipairs(lsm:List("statusbar")) do
+      if not seen[name] then
+        list[#list + 1] = { value = name, path = lsm:Fetch("statusbar", name, true), source = "shared" }
+        seen[name] = true
+      end
+    end
+  end
+  return list
+end
+
+local function ownTexture(name)
+  for _, t in ipairs(TEXTURES) do if t.value == name then return t.path end end
+end
+
+-- File path of a texture name; an unknown one (addon uninstalled) falls back to smooth.
+function Styles.resolveTexture(name, lsm)
+  local path = name and ownTexture(name)
+  if path then return path end
+  if name and lsm then
+    path = lsm:Fetch("statusbar", name, true)
+    if path then return path end
+  end
+  return ownTexture(Styles.DEFAULT_TEXTURE)
+end
+
+-- Presets (the former styles) fill every bar field at once; the user adjusts afterwards.
+Styles.PRESET_LIST = { "smooth", "segmented", "neon", "thin" }
+Styles.PRESETS = {
   smooth = {
-    texture = MEDIA .. "fill.tga", border = 1, height = 18, textPosition = "inside",
-    gloss = true, ticks = false, glow = false, spark = true, rounded = true, shadow = true,
+    texture = "smooth", corners = "rounded", border = "thin", textPosition = "inside", height = 18,
+    gloss = true, shadow = true, glow = false, spark = true, ticks = 0,
   },
   segmented = {
-    texture = MEDIA .. "fill.tga", border = 1, height = 16, textPosition = "inside",
-    gloss = false, ticks = true, glow = false, spark = false, rounded = false, shadow = false,
+    texture = "gradient", corners = "square", border = "thin", textPosition = "inside", height = 16,
+    gloss = false, shadow = false, glow = false, spark = false, ticks = 10,
   },
   neon = {
-    texture = MEDIA .. "fill.tga", border = 1, height = 12, textPosition = "inside",
-    gloss = false, ticks = false, glow = true, spark = true, rounded = true, shadow = false,
+    texture = "flat", corners = "rounded", border = "thin", textPosition = "inside", height = 12,
+    gloss = false, shadow = false, glow = true, spark = true, ticks = 0,
   },
   thin = {
-    texture = MEDIA .. "fill.tga", border = 0, height = 4, textPosition = "above",
-    gloss = false, ticks = false, glow = false, spark = false, rounded = false, shadow = false,
+    texture = "flat", corners = "square", border = "none", textPosition = "above", height = 4,
+    gloss = false, shadow = false, glow = false, spark = false, ticks = 0,
   },
 }
+
+function Styles.applyPreset(settings, key)
+  local preset = Styles.PRESETS[key]
+  if not preset then return end
+  for field, value in pairs(preset) do settings[field] = value end
+end
+
+Styles.BORDER_SIZE = { none = 0, thin = 1, thick = 2 }
 
 Styles.GLOSS = MEDIA .. "gloss.tga"
 Styles.GLOW = MEDIA .. "glow.tga"
