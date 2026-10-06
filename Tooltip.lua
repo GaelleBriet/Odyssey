@@ -36,7 +36,9 @@ local function createFrame()
   frame.strip:SetWidth(STRIP)
   -- Rebuild when Shift is pressed or released.
   frame:SetScript("OnUpdate", function()
-    if owner and Tooltip.shiftDown() ~= shiftShown then Tooltip.Show(owner) end
+    if not owner then return end
+    if Tooltip.shiftDown() ~= shiftShown then Tooltip.Show(owner) return end
+    if ns.Settings().tooltipAnchor == "cursor" then followCursor() end
   end)
 end
 
@@ -78,18 +80,33 @@ local function colorFor(role, colors)
   return colors.text
 end
 
-local function place(anchor)
+local CURSOR_OFFSET = 18
+
+-- Near the mouse ("cursor" anchor), kept on screen by SetClampedToScreen.
+local function followCursor()
+  local x, y = GetCursorPosition()
+  local scale = frame:GetEffectiveScale()
   frame:ClearAllPoints()
+  frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", x / scale + CURSOR_OFFSET, y / scale + CURSOR_OFFSET)
+end
+
+local function place(anchor)
   local s = ns.Settings()
-  local style = ns.Styles.defs[s.style]
-  local above = 8
-  if style and style.textPosition == "above" then above = above + s.barFontSize + 4 end
+  if s.tooltipAnchor == "cursor" then
+    followCursor()
+    return
+  end
+  frame:ClearAllPoints()
+  -- Keep clear of the bar's texts when they sit above or below it.
+  local textRoom = s.barFontSize + 4
+  local above = 8 + (s.textPosition == "above" and textRoom or 0)
+  local below = 8 + (s.textPosition == "below" and textRoom or 0)
   local _, y = anchor:GetCenter()
   local screenMiddle = UIParent:GetHeight() * UIParent:GetEffectiveScale() / 2
   if y and y * anchor:GetEffectiveScale() < screenMiddle then
     frame:SetPoint("BOTTOM", anchor, "TOP", 0, above)
   else
-    frame:SetPoint("TOP", anchor, "BOTTOM", 0, -8)
+    frame:SetPoint("TOP", anchor, "BOTTOM", 0, -below)
   end
 end
 
@@ -112,7 +129,8 @@ function Tooltip.Show(anchor)
   end
 
   reset()
-  frame.bg:SetColorTexture(0.05, 0.05, 0.07, 0.93)
+  frame:SetScale(s.tooltipScale)
+  frame.bg:SetColorTexture(0.05, 0.05, 0.07, s.tooltipBgOpacity)
   frame.strip:SetColorTexture(colors.accent[1], colors.accent[2], colors.accent[3], 1)
 
   local rowHeight = size + 5
