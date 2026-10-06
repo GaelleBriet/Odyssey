@@ -122,7 +122,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
   if event == "ADDON_LOADED" then
     if ... ~= ADDON then return end
     frame:UnregisterEvent("ADDON_LOADED")
-    OdysseyDB = OdysseyDB or {}
+    if type(OdysseyDB) ~= "table" then OdysseyDB = {} end
+    Defaults.migrate(OdysseyDB)
     Defaults.merge(OdysseyDB, Defaults.root)
     frame:RegisterEvent("PLAYER_LOGIN")
   elseif event == "PLAYER_LOGIN" then

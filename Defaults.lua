@@ -47,10 +47,16 @@ Defaults.settings = {
   locked = true,
   point = { "BOTTOM", "UIParent", "BOTTOM", 0, 120 },
   width = 480,
-  height = 16,
+  height = 18,
   scale = 1,
-  style = "glossy",
-  theme = "classic",
+  style = "smooth",
+  palette = "arcane",
+  barFont = "Friz Quadrata",
+  barFontSize = 11,
+  barFontOutline = "OUTLINE", -- "NONE", "OUTLINE" or "THICKOUTLINE"
+  tooltipFont = "Friz Quadrata",
+  tooltipFontSize = 12,
+  tooltipFontOutline = "NONE",
   textLeft = "level",
   textCenter = "current_max_percent",
   textRight = "rested",
@@ -70,8 +76,35 @@ Defaults.settings = {
 }
 
 Defaults.root = {
-  version = 1,
+  version = 2,
   perCharacter = false,
   account = Defaults.settings,
   chars = {},
 }
+
+-- ------------------------------------------------------------- migrations
+
+local V1_STYLES = { flat = "smooth", gradient = "smooth", glossy = "smooth" }
+local V1_THEMES = { classic = "arcane", class = "class", faction = "faction", minimal = "monochrome" }
+
+local function migrateSettings(s)
+  if type(s) ~= "table" then return end
+  if V1_STYLES[s.style] then s.style = V1_STYLES[s.style] end
+  if s.theme ~= nil then
+    s.palette = V1_THEMES[s.theme] or s.palette
+    s.theme = nil
+  end
+end
+
+-- Upgrades a saved OdysseyDB in place. Run before `merge`, which fills the new keys.
+function Defaults.migrate(db)
+  if type(db.version) ~= "number" or db.version >= 2 then return db end
+  migrateSettings(db.account)
+  if type(db.chars) == "table" then
+    for _, data in pairs(db.chars) do
+      if type(data) == "table" then migrateSettings(data.settings) end
+    end
+  end
+  db.version = 2
+  return db
+end

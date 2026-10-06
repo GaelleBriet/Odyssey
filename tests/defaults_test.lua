@@ -42,7 +42,7 @@ end)
 
 test("merge repairs an old, nearly empty OdysseyDB", function()
   local db = D.merge({ probe = { build = "x" } }, D.root)
-  eq(db.version, 1)
+  eq(db.version, 2)
   eq(db.perCharacter, false)
   eq(db.chars, {})
   eq(db.account.style, D.settings.style)
@@ -63,10 +63,60 @@ test("default settings are complete", function()
   local s = D.settings
   eq(s.locked, true)
   eq(s.width, 480)
-  eq(s.style, "glossy")
-  eq(s.theme, "classic")
+  eq(s.height, 18)
+  eq(s.style, "smooth")
+  eq(s.palette, "arcane")
+  eq(s.theme, nil)
+  eq(s.barFont, "Friz Quadrata")
+  eq(s.barFontSize, 11)
+  eq(s.barFontOutline, "OUTLINE")
+  eq(s.tooltipFont, "Friz Quadrata")
+  eq(s.tooltipFontSize, 12)
+  eq(s.tooltipFontOutline, "NONE")
   eq(s.textCenter, "current_max_percent")
   eq(s.maxLevelBehavior, "hide")
   eq(s.tooltip.history, true)
   eq(s.point, { "BOTTOM", "UIParent", "BOTTOM", 0, 120 })
+  eq(D.root.version, 2)
+end)
+
+test("migrate converts v1 styles and themes for the account and every character", function()
+  local db = {
+    version = 1,
+    account = { style = "glossy", theme = "minimal" },
+    chars = {
+      ["Realm-A"] = { settings = { style = "flat", theme = "class" } },
+      ["Realm-B"] = { history = {} },
+      ["Realm-C"] = "junk",
+    },
+  }
+  D.migrate(db)
+  eq(db.version, 2)
+  eq(db.account.style, "smooth")
+  eq(db.account.palette, "monochrome")
+  eq(db.account.theme, nil)
+  eq(db.chars["Realm-A"].settings.style, "smooth")
+  eq(db.chars["Realm-A"].settings.palette, "class")
+end)
+
+test("migrate maps every v1 theme and keeps unknown v2 values", function()
+  local map = { classic = "arcane", class = "class", faction = "faction", minimal = "monochrome" }
+  for old, new in pairs(map) do
+    local db = { version = 1, account = { theme = old, style = "gradient" }, chars = {} }
+    D.migrate(db)
+    eq(db.account.palette, new)
+    eq(db.account.style, "smooth")
+  end
+  local db = { version = 1, account = { style = "neon" }, chars = {} }
+  D.migrate(db)
+  eq(db.account.style, "neon")
+end)
+
+test("migrate leaves a fresh or already migrated database alone", function()
+  local fresh = {}
+  D.migrate(fresh)
+  eq(fresh, {})
+  local v2 = { version = 2, account = { style = "flat" } }
+  D.migrate(v2)
+  eq(v2.account.style, "flat")
 end)
