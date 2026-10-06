@@ -120,16 +120,22 @@ function Bar.create(source, opts)
   self.alpha = 1
 
   if not self.preview then
+  -- Dragging is done by hand (not StartMoving) so the bar can snap to the screen centre.
   f:SetScript("OnDragStart", function()
-    if not self.settings().locked then
-      self.state.moving = true
-      f:StartMoving()
-    end
+    if self.settings().locked then return end
+    local eff = f:GetEffectiveScale()
+    local cx, cy = GetCursorPosition()
+    local fx, fy = f:GetCenter()
+    self.drag = { fx - cx / eff, fy - cy / eff }
+    self.state.moving = true
+    if ns.Guides then ns.Guides.Request(self, true) end
   end)
   f:SetScript("OnDragStop", function()
-    f:StopMovingOrSizing()
+    if not self.drag then return end
+    self.drag = nil
     self.state.moving = false
-    if not self.settings().locked then self:SavePosition() end
+    self:SavePosition()
+    if ns.Guides then ns.Guides.Request(self, not self.settings().locked) end
   end)
   f:SetScript("OnEnter", function()
     self.state.hover = true
@@ -149,6 +155,40 @@ function Bar.create(source, opts)
   self:ApplySettings()
   self:Update()
   return self
+end
+
+local SNAP_DISTANCE = 8
+
+-- Screen centre in this frame's own coordinates.
+function Bar:ScreenCenter()
+  local ratio = UIParent:GetEffectiveScale() / self.frame:GetEffectiveScale()
+  return UIParent:GetWidth() * ratio / 2, UIParent:GetHeight() * ratio / 2
+end
+
+-- One step of a drag: follow the cursor, stick to the centre lines unless Shift is held.
+function Bar:DragStep()
+  local f = self.frame
+  local eff = f:GetEffectiveScale()
+  local cx, cy = GetCursorPosition()
+  local x, y = cx / eff + self.drag[1], cy / eff + self.drag[2]
+  local snappedX, snappedY = false, false
+  if not IsShiftKeyDown() then
+    local midX, midY = self:ScreenCenter()
+    x, snappedX = Calc.snapToCenter(x, midX, SNAP_DISTANCE)
+    y, snappedY = Calc.snapToCenter(y, midY, SNAP_DISTANCE)
+  end
+  f:ClearAllPoints()
+  f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+  if ns.Guides then ns.Guides.Highlight(snappedX, snappedY) end
+end
+
+function Bar:CenterHorizontally()
+  local f = self.frame
+  local _, y = f:GetCenter()
+  local midX = self:ScreenCenter()
+  f:ClearAllPoints()
+  f:SetPoint("CENTER", UIParent, "BOTTOMLEFT", midX, y)
+  self:SavePosition()
 end
 
 function Bar:SavePosition()
@@ -171,6 +211,7 @@ function Bar:ApplySettings()
   local f = self.frame
   local width = self.preview and self.previewWidth or s.width
   f:SetSize(width, s.height)
+  if not self.preview and ns.Guides then ns.Guides.Request(self, not s.locked) end
   if not self.preview then
     f:SetScale(s.scale)
     local p = s.point
@@ -396,6 +437,7 @@ function Bar:OnUpdate(elapsed)
   if moved then self:Layout() end
 
   if self.preview then return end
+  if self.drag then self:DragStep() end
 
   -- Mouseover visibility: fade toward the target opacity.
   self.state.tooltip = ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) or false

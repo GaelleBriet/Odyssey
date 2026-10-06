@@ -44,6 +44,13 @@ function Calc.repTargets(snap)
   return { fill = fill, quest = 0, rested = 0 }
 end
 
+-- Magnetic guide: a position within `threshold` of the centre sticks to it.
+-- Returns the position to use and whether it snapped.
+function Calc.snapToCenter(value, center, threshold)
+  if math.abs(value - center) <= threshold then return center, true end
+  return value, false
+end
+
 -- Rested and quest segments both start at the fill: the shorter one is drawn on top so
 -- the two show as clean consecutive bands instead of a blended overlap.
 function Calc.topSegment(targets)

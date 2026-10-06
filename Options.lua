@@ -84,6 +84,7 @@ Options.CONTROLS = {
   c("bar", "size", "scale", "slider", "Scale", { min = 0.5, max = 2, step = 0.05, display = percent }),
   c("bar", "size", "bgOpacity", "slider", "Background opacity", { min = 0, max = 1, step = 0.05, display = percent, look = true }),
   c("bar", "size", "barAlpha", "slider", "Bar opacity", { min = 0.1, max = 1, step = 0.05, display = percent }),
+  c("bar", "size", "action.centerX", "action", "Center horizontally", { action = "centerX" }),
 
   c("bar", "visibility", "noFaction", "menu", "No watched faction", { bars = { "rep" },
     values = { "hide", "text" }, display = named("noFaction.") }),
@@ -291,6 +292,7 @@ Options.ACTIONS = {
     print("|cff9966ffOdyssey|r: " .. L["Session reset."])
   end,
   resetProfile = function() Options.profileAction("reset") end,
+  centerX = function(bar) (bar == "rep" and ns.repBar or ns.bar):CenterHorizontally() end,
   clearHistory = function(_)
     History.reset(ns.CharData().history)
     print("|cff9966ffOdyssey|r: " .. L["History cleared."])

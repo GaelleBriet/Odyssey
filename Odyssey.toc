@@ -19,6 +19,7 @@ Sources\Reputation.lua
 Texts.lua
 Styles.lua
 Visibility.lua
+Guides.lua
 Profiles.lua
 Fonts.lua
 TooltipContent.lua

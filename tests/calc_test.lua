@@ -130,3 +130,10 @@ test("reputation bar targets: only the fill, no quest or rested band", function(
   eq(Calc.repTargets({ current = 999, max = 999, isMax = true }), { fill = 1, quest = 0, rested = 0 })
   eq(Calc.repTargets({ none = true, current = 0, max = 0 }), { fill = 0, quest = 0, rested = 0 })
 end)
+
+test("snapToCenter: within the threshold the position sticks to the centre", function()
+  eq({ Calc.snapToCenter(503, 500, 8) }, { 500, true })
+  eq({ Calc.snapToCenter(492, 500, 8) }, { 500, true })
+  eq({ Calc.snapToCenter(509, 500, 8) }, { 509, false })
+  eq({ Calc.snapToCenter(100, 500, 8) }, { 100, false })
+end)
