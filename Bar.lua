@@ -304,10 +304,7 @@ function Bar:Update()
   if hidden then self.frame:Hide() else self.frame:Show() end
   ns.Compat.setNativeXPBarHidden(s.hideNativeBar and not hidden)
 
-  local questTotal = snap.quests and snap.quests.total or 0
-  self.target.fill = Calc.fraction(snap.xp, snap.xpMax)
-  self.target.quest = Calc.fraction(snap.xp + questTotal, snap.xpMax)
-  self.target.rested = Calc.fraction(snap.xp + snap.rested, snap.xpMax)
+  self.target = Calc.barTargets(snap, s)
   -- Snap back after a level-up instead of sliding backwards.
   if self.target.fill < self.current.fill then self.current.fill = self.target.fill end
 

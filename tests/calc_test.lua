@@ -101,3 +101,20 @@ test("formatDuration", function()
   eq(Calc.formatDuration(nil), nil)
   eq(Calc.formatDuration(3900, { d = "j", h = "h", m = "min", s = "s" }), "1h 05min")
 end)
+
+test("bar targets: fill, quest and rested segments as fractions of the bar", function()
+  local snap = { xp = 500, xpMax = 1000, rested = 200, quests = { total = 100 } }
+  eq(Calc.barTargets(snap, { showQuestSegment = true, showRestedSegment = true }),
+    { fill = 0.5, quest = 0.6, rested = 0.7 })
+end)
+
+test("bar targets: hidden segments collapse onto the fill", function()
+  local snap = { xp = 500, xpMax = 1000, rested = 200, quests = { total = 100 } }
+  eq(Calc.barTargets(snap, { showQuestSegment = false, showRestedSegment = false }),
+    { fill = 0.5, quest = 0.5, rested = 0.5 })
+end)
+
+test("bar targets: no quest data and a full bar", function()
+  eq(Calc.barTargets({ xp = 900, xpMax = 1000, rested = 500 }, { showQuestSegment = true, showRestedSegment = true }),
+    { fill = 0.9, quest = 0.9, rested = 1 })
+end)

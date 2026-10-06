@@ -26,6 +26,18 @@ function Calc.fraction(value, max)
   return value / max
 end
 
+-- Where each layer of the bar ends, as fractions of the bar. A hidden segment collapses onto
+-- the fill (zero width beyond it).
+function Calc.barTargets(snap, settings)
+  local questTotal = settings.showQuestSegment and snap.quests and snap.quests.total or 0
+  local rested = settings.showRestedSegment and snap.rested or 0
+  return {
+    fill = Calc.fraction(snap.xp, snap.xpMax),
+    quest = Calc.fraction(snap.xp + questTotal, snap.xpMax),
+    rested = Calc.fraction(snap.xp + rested, snap.xpMax),
+  }
+end
+
 -- XP gained between two readings. `leveledUp` means the level went up in between;
 -- a drop in XP is also read as a level-up so that a missed level event cannot lose the gain.
 function Calc.xpDelta(oldXP, oldMax, newXP, leveledUp)

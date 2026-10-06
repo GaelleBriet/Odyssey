@@ -49,7 +49,7 @@ test("every customization of the spec has a control", function()
     "preset", "texture", "corners", "border", "borderColor", "bgOpacity", "gloss", "shadow", "glow",
     "spark", "ticks", "textPosition", "visibility", "fadedAlpha", "palette", "barFont", "barFontSize",
     "barFontOutline", "tooltipFont", "tooltipBgOpacity", "tooltipScale", "tooltipAnchor",
-    "colors.fill", "colors.rested", "colors.quest", "colors.bg", "colors.border", "colors.text",
+    "showQuestSegment", "showRestedSegment", "colors.fill", "colors.rested", "colors.quest", "colors.bg", "colors.border", "colors.text",
   }) do
     truthy(control(key), key)
   end

@@ -56,6 +56,8 @@ Options.CONTROLS = {
   -- Colours
   { tab = "colors", key = "palette", kind = "menu", label = "Palette", source = "palettes" },
   { tab = "colors", key = "borderColor", kind = "menu", label = "Border color", values = { "palette", "black", "gold" }, display = named("borderColor.") },
+  { tab = "colors", key = "showQuestSegment", kind = "check", label = "Show quest XP on the bar" },
+  { tab = "colors", key = "showRestedSegment", kind = "check", label = "Show rested XP on the bar" },
   { tab = "colors", key = "colors.fill", kind = "color", label = "color.fill", part = "fill" },
   { tab = "colors", key = "colors.rested", kind = "color", label = "color.rested", part = "rested" },
   { tab = "colors", key = "colors.quest", kind = "color", label = "color.quest", part = "quest" },
