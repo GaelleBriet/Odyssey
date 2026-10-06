@@ -20,6 +20,7 @@ function Compat.xpApi()
     unitLevel = function() return UnitLevel("player") end,
     restedXP = function() return GetXPExhaustion() end,
     isMaxLevel = Compat.isMaxLevel,
+    isResting = Compat.isResting,
     now = GetTime,
   }
 end
@@ -157,4 +158,61 @@ end
 
 function Compat.repApi()
   return { watched = Compat.watchedFaction, label = Compat.standingLabel, now = GetTime }
+end
+
+-- ------------------------------------------------------------- player state
+
+function Compat.isResting() return IsResting and IsResting() and true or false end
+function Compat.inCombat() return InCombatLockdown and InCombatLockdown() and true or false end
+function Compat.isDead() return UnitIsDeadOrGhost and UnitIsDeadOrGhost("player") and true or false end
+
+function Compat.inInstance()
+  if not IsInInstance then return false end
+  local inside, kind = IsInInstance()
+  return (inside and kind ~= "none") and true or false
+end
+
+-- ------------------------------------------------------------ factions, chat
+
+-- Factions the player can watch (headers left out), modern or classic API.
+function Compat.factionList()
+  local list = {}
+  if C_Reputation and C_Reputation.GetNumFactions and C_Reputation.GetFactionDataByIndex then
+    for i = 1, C_Reputation.GetNumFactions() do
+      local data = C_Reputation.GetFactionDataByIndex(i)
+      if data and data.name and not data.isHeader then
+        list[#list + 1] = { name = data.name, index = i, watched = data.isWatched and true or false }
+      end
+    end
+  elseif GetNumFactions and GetFactionInfo then
+    for i = 1, GetNumFactions() do
+      local name, _, _, _, _, _, _, _, isHeader, _, _, isWatched = GetFactionInfo(i)
+      if name and not isHeader then
+        list[#list + 1] = { name = name, index = i, watched = isWatched and true or false }
+      end
+    end
+  end
+  return list
+end
+
+function Compat.watchFaction(index)
+  if C_Reputation and C_Reputation.SetWatchedFactionByIndex then
+    C_Reputation.SetWatchedFactionByIndex(index)
+  elseif SetWatchedFactionIndex then
+    SetWatchedFactionIndex(index)
+  end
+end
+
+-- Puts text into the chat box (the open one, or opens it); never sends anything by itself.
+function Compat.insertChat(text)
+  local box = ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow()
+  if box then
+    box:Insert(text)
+  elseif ChatFrame_OpenChat then
+    ChatFrame_OpenChat(text)
+  end
+end
+
+function Compat.openReputation()
+  if ToggleCharacter then ToggleCharacter("ReputationFrame") end
 end

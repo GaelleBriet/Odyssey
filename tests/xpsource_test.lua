@@ -182,3 +182,14 @@ test("resetSession clears the session figures", function()
   eq(snap.session.xpGained, 0)
   eq(snap.lastGain, nil)
 end)
+
+test("the snapshot says whether the player is resting", function()
+  local state = { xp = 500, xpMax = 1000, level = 10, rested = 0, time = 0, resting = true }
+  local api = fakeApi(state)
+  api.isResting = function() return state.resting end
+  local src = ns.XPSource.new(api)
+  eq(src:Get().resting, true)
+  state.resting = false
+  eq(src:Get().resting, false)
+  eq(newSource():Get().resting, false) -- an api without isResting
+end)

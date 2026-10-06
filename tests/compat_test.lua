@@ -193,3 +193,57 @@ test("an empty modern faction record counts as no watched faction", function()
     eq(Compat.watchedFaction(), nil)
   end)
 end)
+
+test("faction list (modern API): headers skipped, watched one marked", function()
+  local watched
+  withGlobals({
+    C_Reputation = {
+      GetNumFactions = function() return 3 end,
+      GetFactionDataByIndex = function(i)
+        return ({ { name = "Horde", isHeader = true }, { name = "Orgrimmar", isWatched = true }, { name = "Ratchet" } })[i]
+      end,
+      SetWatchedFactionByIndex = function(i) watched = i end,
+    },
+    GetNumFactions = false,
+  }, function()
+    eq(Compat.factionList(), { { name = "Orgrimmar", index = 2, watched = true }, { name = "Ratchet", index = 3, watched = false } })
+    Compat.watchFaction(3)
+    eq(watched, 3)
+  end)
+end)
+
+test("faction list without any API is empty", function()
+  withGlobals({ C_Reputation = false, GetNumFactions = false }, function()
+    eq(Compat.factionList(), {})
+  end)
+end)
+
+test("chat insertion: into the open chat box, otherwise opens the chat with the text", function()
+  local inserted, opened
+  local box = { Insert = function(_, text) inserted = text end }
+  withGlobals({ ChatEdit_GetActiveWindow = function() return box end, ChatFrame_OpenChat = function(t) opened = t end }, function()
+    Compat.insertChat("hello")
+    eq(inserted, "hello")
+    eq(opened, nil)
+  end)
+  withGlobals({ ChatEdit_GetActiveWindow = function() return nil end, ChatFrame_OpenChat = function(t) opened = t end }, function()
+    Compat.insertChat("again")
+    eq(opened, "again")
+  end)
+end)
+
+test("player state helpers tolerate missing APIs", function()
+  withGlobals({ IsResting = false, IsInInstance = false, UnitIsDeadOrGhost = false, InCombatLockdown = false }, function()
+    eq(Compat.isResting(), false)
+    eq(Compat.inInstance(), false)
+    eq(Compat.isDead(), false)
+    eq(Compat.inCombat(), false)
+  end)
+  withGlobals({ IsInInstance = function() return true, "party" end, IsResting = function() return 1 end }, function()
+    eq(Compat.inInstance(), true)
+    eq(Compat.isResting(), true)
+  end)
+  withGlobals({ IsInInstance = function() return false, "none" end }, function()
+    eq(Compat.inInstance(), false)
+  end)
+end)

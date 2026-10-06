@@ -145,6 +145,7 @@ function XPSource:Get()
     remaining = remaining,
     percent = Calc.percent(self.xp, self.xpMax),
     isMaxLevel = api.isMaxLevel(),
+    resting = api.isResting and api.isResting() or false,
     rested = self.rested,
     restedPercent = Calc.percent(self.rested, self.xpMax),
     session = {
