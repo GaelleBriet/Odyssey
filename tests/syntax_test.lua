@@ -52,12 +52,12 @@ test("module fields used by the addon exist", function()
   local ns = newNamespace()
   ns.L = setmetatable({}, { __index = function(_, k) return k end })
   for _, file in ipairs({ "Defaults.lua", "Calc.lua", "History.lua", "Compat.lua", "Sources/XP.lua",
-    "Sources/Reputation.lua", "Texts.lua", "Styles.lua", "Visibility.lua", "Profiles.lua", "Fonts.lua",
+    "Sources/Reputation.lua", "Texts.lua", "Styles.lua", "Visibility.lua", "Alerts.lua", "Characters.lua", "Backup.lua", "Profiles.lua", "Fonts.lua",
     "TooltipContent.lua" }) do
     loadAddonFile(file, ns)
   end
   local modules = { "Calc", "Defaults", "History", "Compat", "Texts", "Styles", "Palettes", "Visibility",
-    "Profiles", "Fonts", "TooltipContent", "XPSource", "RepSource" }
+    "Profiles", "Fonts", "TooltipContent", "XPSource", "RepSource", "Alerts", "Characters", "Backup" }
   local missing, seen = {}, {}
   local listing = io.popen("find . -name '*.lua' -not -path './tests/*' -not -path './.git/*' -not -path './.superpowers/*'")
   for file in listing:lines() do

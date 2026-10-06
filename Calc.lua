@@ -51,6 +51,19 @@ function Calc.snapToCenter(value, center, threshold)
   return value, false
 end
 
+-- Rested XP planner: rested XP builds 5 % of a level per 8 h while resting (a quarter of
+-- that elsewhere) up to 150 % of a level. timeToFull is in seconds (nil without data).
+function Calc.restedTiming(rested, xpMax, resting)
+  if not xpMax or xpMax <= 0 then return { max = 0, percent = 0, timeToFull = nil } end
+  local max = xpMax * 1.5
+  local perSecond = xpMax * 0.05 / (8 * 3600) * (resting and 1 or 0.25)
+  return {
+    max = max,
+    percent = (rested or 0) / xpMax * 100, -- can exceed 100: rested XP goes up to 150 %
+    timeToFull = math.max(0, max - rested) / perSecond,
+  }
+end
+
 -- Rested and quest segments both start at the fill: the shorter one is drawn on top so
 -- the two show as clean consecutive bands instead of a blended overlap.
 function Calc.topSegment(targets)

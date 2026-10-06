@@ -7,6 +7,7 @@
 ## Version: @project-version@
 ## License: MIT
 ## SavedVariables: OdysseyDB
+## SavedVariablesPerCharacter: OdysseyCharDB
 
 Locales\enUS.lua
 Locales\frFR.lua
@@ -19,6 +20,9 @@ Sources\Reputation.lua
 Texts.lua
 Styles.lua
 Visibility.lua
+Alerts.lua
+Characters.lua
+Backup.lua
 Guides.lua
 Profiles.lua
 Fonts.lua

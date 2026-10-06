@@ -94,6 +94,19 @@ for key, fn in pairs(rep) do
   end
 end
 
+-- One line describing the progress, inserted into the chat box on Shift+click.
+function Texts.chatLine(kind, snap, opts, L)
+  local function num(n) return Calc.formatNumber(n, opts.number) end
+  if kind == "rep" then
+    if snap.none then return nil end
+    return L["chat.rep"]:format(snap.name, snap.standingLabel, num(snap.current), num(snap.max), pct(snap.percent))
+  end
+  if snap.isMaxLevel then return L["chat.max"]:format(snap.level) end
+  local line = L["chat.xp"]:format(snap.level, pct(snap.percent), num(snap.xp), num(snap.xpMax), num(snap.remaining))
+  if snap.rested > 0 then line = line .. " | " .. L["chat.rested"]:format(num(snap.rested)) end
+  return line
+end
+
 function Texts.render(key, snap, opts, L)
   local fn = renderers[key]
   if not fn then return "" end
