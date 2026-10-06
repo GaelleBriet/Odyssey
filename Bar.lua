@@ -35,11 +35,8 @@ local function setGradient(tex, from, to)
 end
 
 local function setFont(fs, s, prefix)
-  local path = Fonts.resolve(s[prefix .. "Font"], Fonts.lsm())
-  local flags = Fonts.flags(s[prefix .. "FontOutline"])
-  if not fs:SetFont(path, s[prefix .. "FontSize"], flags) then
-    fs:SetFont(Fonts.resolve(Fonts.DEFAULT, nil), s[prefix .. "FontSize"], flags)
-  end
+  Fonts.apply(fs, Fonts.resolve(s[prefix .. "Font"], Fonts.lsm()), s[prefix .. "FontSize"],
+    Fonts.flags(s[prefix .. "FontOutline"]))
 end
 
 function Bar.create(source)
@@ -54,6 +51,12 @@ function Bar.create(source)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
 
+  -- Soft drop shadow under the bar (smooth style), drawn from the glow texture in black.
+  self.shadow = f:CreateTexture(nil, "BACKGROUND", nil, -3)
+  self.shadow:SetTexture(Styles.GLOW)
+  self.shadow:SetVertexColor(0, 0, 0, 0.7)
+  self.shadow:SetPoint("TOPLEFT", f, "TOPLEFT", -5, 2)
+  self.shadow:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 5, -6)
   self.borderTex = f:CreateTexture(nil, "BACKGROUND", nil, -2)
   self.bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
   self.glow = f:CreateTexture(nil, "BACKGROUND", nil, 1)
@@ -187,6 +190,7 @@ function Bar:ApplySettings()
   self.gloss:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
   self.gloss:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -b, b)
   if style.gloss then self.gloss:Show() else self.gloss:Hide() end
+  if style.shadow then self.shadow:Show() else self.shadow:Hide() end
 
   local a = colors.accent
   self.glow:SetVertexColor(a[1], a[2], a[3], 0.85)
@@ -231,7 +235,7 @@ function Bar:Layout()
   setWidth(self.quest, self.current.quest * inner)
   setWidth(self.fill, self.current.fill * inner)
 
-  local fillShown = self.current.fill > 0.002
+  local fillShown = self.current.fill * inner >= 0.5
   if self.style.glow and fillShown then
     self.glow:ClearAllPoints()
     self.glow:SetPoint("TOPLEFT", self.fill, "TOPLEFT", -GLOW_OUTSET, GLOW_OUTSET)

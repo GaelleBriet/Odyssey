@@ -13,7 +13,7 @@ test("the four styles are defined", function()
     eq(type(def.border), "number")
     eq(type(def.height), "number")
     truthy(def.textPosition == "inside" or def.textPosition == "above", key)
-    for _, flag in ipairs({ "gloss", "ticks", "glow", "spark", "rounded" }) do
+    for _, flag in ipairs({ "gloss", "ticks", "glow", "spark", "rounded", "shadow" }) do
       eq(type(def[flag]), "boolean")
     end
   end
@@ -24,6 +24,7 @@ test("style traits match the validated mockups", function()
   eq(Styles.defs.neon.glow, true)
   eq(Styles.defs.smooth.rounded, true)
   eq(Styles.defs.smooth.gloss, true)
+  eq(Styles.defs.smooth.shadow, true)
   eq(Styles.defs.thin.textPosition, "above")
   eq(Styles.defs.thin.height, 4)
   eq(Styles.defs.thin.spark, false)

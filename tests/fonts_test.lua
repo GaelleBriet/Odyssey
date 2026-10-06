@@ -78,3 +78,34 @@ test("lsm() returns the library only when an addon loaded it", function()
   eq(Fonts.lsm(), lib)
   _G.LibStub = previous
 end)
+
+local function fakeFontString(valid, returnsNothing)
+  local fs = { font = "Fonts\\FRIZQT__.TTF" }
+  function fs:SetFont(path, size, flags)
+    if valid[path] then self.font, self.size, self.flags = path, size, flags end
+    if returnsNothing then return end
+    return valid[path] and true or false
+  end
+  function fs:GetFont() return self.font, self.size, self.flags end
+  return fs
+end
+
+test("apply uses the requested font even when SetFont returns nothing", function()
+  local path = Fonts.resolve("Cinzel", nil)
+  local fs = fakeFontString({ [path] = true, ["Fonts\\FRIZQT__.TTF"] = true }, true)
+  Fonts.apply(fs, path, 13, "OUTLINE")
+  eq({ fs:GetFont() }, { path, 13, "OUTLINE" })
+end)
+
+test("apply falls back to the default font when the file cannot be used", function()
+  local fs = fakeFontString({ ["Fonts\\FRIZQT__.TTF"] = true }, false)
+  Fonts.apply(fs, "Interface\\AddOns\\Gone\\font.ttf", 12, "")
+  eq({ fs:GetFont() }, { "Fonts\\FRIZQT__.TTF", 12, "" })
+end)
+
+test("apply compares font paths without caring about case or slashes", function()
+  local fs = fakeFontString({ ["Fonts\\ARIALN.TTF"] = true, ["Fonts\\FRIZQT__.TTF"] = true }, true)
+  function fs:GetFont() return "fonts/arialn.ttf", self.size, self.flags end
+  Fonts.apply(fs, "Fonts\\ARIALN.TTF", 11, "")
+  eq(fs.font, "Fonts\\ARIALN.TTF")
+end)

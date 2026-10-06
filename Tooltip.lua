@@ -18,6 +18,11 @@ local frame, owner, shiftShown
 local strings, textures = {}, {}
 local usedStrings, usedTextures = 0, 0
 
+-- IsShiftKeyDown returns 1/nil on some clients and true/false on others.
+function Tooltip.shiftDown()
+  return IsShiftKeyDown() and true or false
+end
+
 local function createFrame()
   frame = CreateFrame("Frame", "OdysseyTooltip", UIParent)
   frame:SetFrameStrata("TOOLTIP")
@@ -31,7 +36,7 @@ local function createFrame()
   frame.strip:SetWidth(STRIP)
   -- Rebuild when Shift is pressed or released.
   frame:SetScript("OnUpdate", function()
-    if owner and IsShiftKeyDown() ~= shiftShown then Tooltip.Show(owner) end
+    if owner and Tooltip.shiftDown() ~= shiftShown then Tooltip.Show(owner) end
   end)
 end
 
@@ -55,6 +60,7 @@ local function nextTexture()
     textures[usedTextures] = tex
   end
   tex:ClearAllPoints()
+  tex:SetVertexColor(1, 1, 1, 1)
   tex:Show()
   return tex
 end
@@ -74,10 +80,14 @@ end
 
 local function place(anchor)
   frame:ClearAllPoints()
+  local s = ns.Settings()
+  local style = ns.Styles.defs[s.style]
+  local above = 8
+  if style and style.textPosition == "above" then above = above + s.barFontSize + 4 end
   local _, y = anchor:GetCenter()
   local screenMiddle = UIParent:GetHeight() * UIParent:GetEffectiveScale() / 2
   if y and y * anchor:GetEffectiveScale() < screenMiddle then
-    frame:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
+    frame:SetPoint("BOTTOM", anchor, "TOP", 0, above)
   else
     frame:SetPoint("TOP", anchor, "BOTTOM", 0, -8)
   end
@@ -86,7 +96,7 @@ end
 function Tooltip.Show(anchor)
   if not frame then createFrame() end
   owner = anchor
-  shiftShown = IsShiftKeyDown() and true or false
+  shiftShown = Tooltip.shiftDown()
 
   local s = ns.Settings()
   local colors = (ns.bar and ns.bar.colors) or Palettes.colors(s.palette, {})
@@ -97,9 +107,7 @@ function Tooltip.Show(anchor)
   local size = s.tooltipFontSize
   local flags = Fonts.flags(s.tooltipFontOutline)
   local function style(fs, fontSize, color)
-    if not fs:SetFont(fontPath, fontSize, flags) then
-      fs:SetFont(Fonts.resolve(Fonts.DEFAULT, nil), fontSize, flags)
-    end
+    Fonts.apply(fs, fontPath, fontSize, flags)
     fs:SetTextColor(color[1], color[2], color[3], 1)
   end
 

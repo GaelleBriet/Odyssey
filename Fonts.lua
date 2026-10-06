@@ -71,6 +71,20 @@ function Fonts.resolve(name, lsm)
   return own(Fonts.DEFAULT)
 end
 
+local function normalize(path)
+  if type(path) ~= "string" then return nil end
+  return (path:lower():gsub("/", "\\"))
+end
+
+-- Sets a font and checks the result with GetFont rather than SetFont's return value,
+-- which differs between clients; a font that did not load falls back to the default.
+function Fonts.apply(fs, path, size, flags)
+  fs:SetFont(path, size, flags)
+  if normalize((fs:GetFont())) ~= normalize(path) then
+    fs:SetFont(own(Fonts.DEFAULT), size, flags)
+  end
+end
+
 function Fonts.flags(outline)
   return OUTLINES[outline] or ""
 end

@@ -76,12 +76,23 @@ local MENU_WIDTH, ITEM_HEIGHT, MENU_ROWS = 200, 20, 12
 local menu
 
 local function createMenu()
+  local catcher = CreateFrame("Button", nil, UIParent)
+  catcher:SetAllPoints(UIParent)
+  catcher:SetFrameStrata("FULLSCREEN_DIALOG")
+  catcher:RegisterForClicks("AnyUp")
+  catcher:Hide()
   menu = CreateFrame("Frame", "OdysseyMenu", UIParent)
+  menu.catcher = catcher
   menu:SetFrameStrata("FULLSCREEN_DIALOG")
   menu:SetClampedToScreen(true)
   menu:EnableMouse(true)
   menu:EnableMouseWheel(true)
   menu:Hide()
+  menu:SetFrameLevel(catcher:GetFrameLevel() + 10)
+  -- A click anywhere outside the menu lands on the catcher and closes it.
+  catcher:SetScript("OnClick", function() menu:Hide() end)
+  menu:SetScript("OnShow", function() catcher:Show() end)
+  menu:SetScript("OnHide", function() catcher:Hide() end)
   local bg = menu:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
   bg:SetColorTexture(0.05, 0.05, 0.07, 0.97)
@@ -131,7 +142,7 @@ local function openMenu(button, control, onPick)
     for i, row in ipairs(menu.rows) do
       local item = menu.items[i + menu.offset]
       if item then
-        if not (item.font and row.text:SetFont(item.font, 13, "")) then row.text:SetFont(defaultFont, 12, "") end
+        Fonts.apply(row.text, item.font or defaultFont, item.font and 13 or 12, "")
         row.text:SetText(item.text)
         row.check:SetShown(item.value == current)
         row:SetScript("OnClick", function()

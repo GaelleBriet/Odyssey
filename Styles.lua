@@ -12,19 +12,19 @@ ns.Styles = Styles
 Styles.defs = {
   smooth = {
     texture = MEDIA .. "fill.tga", border = 1, height = 18, textPosition = "inside",
-    gloss = true, ticks = false, glow = false, spark = true, rounded = true,
+    gloss = true, ticks = false, glow = false, spark = true, rounded = true, shadow = true,
   },
   segmented = {
     texture = MEDIA .. "fill.tga", border = 1, height = 16, textPosition = "inside",
-    gloss = false, ticks = true, glow = false, spark = false, rounded = false,
+    gloss = false, ticks = true, glow = false, spark = false, rounded = false, shadow = false,
   },
   neon = {
     texture = MEDIA .. "fill.tga", border = 1, height = 12, textPosition = "inside",
-    gloss = false, ticks = false, glow = true, spark = true, rounded = true,
+    gloss = false, ticks = false, glow = true, spark = true, rounded = true, shadow = false,
   },
   thin = {
     texture = MEDIA .. "fill.tga", border = 0, height = 4, textPosition = "above",
-    gloss = false, ticks = false, glow = false, spark = false, rounded = false,
+    gloss = false, ticks = false, glow = false, spark = false, rounded = false, shadow = false,
   },
 }
 
