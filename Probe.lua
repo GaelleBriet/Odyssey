@@ -12,7 +12,8 @@ local PROBES = {
   "InterfaceOptions_AddCategory", "InterfaceOptionsFrame_OpenToCategory",
   "MainMenuExpBar", "StatusTrackingBarManager", "ReputationWatchBar",
   "UIParent", "GameTooltip", "RAID_CLASS_COLORS", "UnitFactionGroup", "NUM_CHAT_WINDOWS",
-  "STANDARD_TEXT_FONT",
+  "STANDARD_TEXT_FONT", "CreateColor", "LibStub", "IsShiftKeyDown", "UISpecialFrames",
+  "UIParent.CreateMaskTexture",
 }
 
 local function resolve(path)

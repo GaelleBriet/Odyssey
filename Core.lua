@@ -130,6 +130,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
     frame:UnregisterEvent("PLAYER_LOGIN")
     Defaults.merge(ns.Settings(), Defaults.settings)
     ns.CharData()
+    ns.Fonts.registerBundled(ns.Fonts.lsm())
     ns.source = ns.XPSource.new(Compat.xpApi())
     if ns.Bar then ns.bar = ns.Bar.create(ns.source) end
     if ns.Options then ns.Options.create() end

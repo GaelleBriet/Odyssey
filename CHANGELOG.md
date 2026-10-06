@@ -2,8 +2,9 @@
 
 ## 0.1.0
 
-- Custom XP bar with three styles and four colour themes, rested XP and quests-to-turn-in segments.
-- Three configurable text slots (left, center, right).
-- Detailed tooltip: level totals, rested XP, quest-by-quest XP, session pace, kills to level, time played.
+- Custom XP bar in four styles (smooth, segmented, neon, thin line) and eleven palettes.
+- Rested XP and quests-to-turn-in segments on the bar; three configurable text slots.
+- Font choice for the bar and the tooltip: game fonts, bundled OFL fonts, LibSharedMedia fonts.
+- Minimal tooltip with the essentials; hold Shift for quest-by-quest XP, kills, session and history.
 - Leveling history: time and XP per hour for each level, compared with your own average.
 - English and French.
