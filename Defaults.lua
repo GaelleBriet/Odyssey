@@ -95,6 +95,51 @@ Defaults.settings = {
   },
 }
 
+-- The reputation bar has a full set of its own settings, nested as settings.rep, starting
+-- from the XP bar's defaults.
+Defaults.repSettings = Defaults.copy(Defaults.settings)
+do
+  local rep = Defaults.repSettings
+  rep.point = { "TOP", "OdysseyBar", "BOTTOM", 0, -8 }
+  rep.textLeft = "faction"
+  rep.textCenter = "rep_current_max_percent"
+  rep.textRight = "standing"
+  rep.tooltip = { progress = true, session = true }
+  rep.enabled = true
+  rep.linkStyle = true -- the look follows the XP bar
+  rep.colorMode = "standing" -- "standing" (the game's standing colours) or "palette"
+  rep.noFaction = "hide" -- "hide" or "text"
+end
+Defaults.settings.rep = Defaults.repSettings
+
+-- Look settings the reputation bar takes from the XP bar while "same style" is on.
+Defaults.LINKED_KEYS = {
+  "texture", "corners", "border", "borderColor", "bgOpacity", "gloss", "shadow", "glow", "spark", "ticks",
+  "palette", "colors", "barFont", "barFontSize", "barFontOutline",
+  "tooltipFont", "tooltipFontSize", "tooltipFontOutline", "tooltipBgOpacity", "tooltipScale",
+}
+local LINKED = {}
+for _, key in ipairs(Defaults.LINKED_KEYS) do LINKED[key] = true end
+
+-- The reputation bar's settings as the bar and the settings window see them: its own values,
+-- except the look keys, read from the XP bar while linkStyle is on. Writes go to settings.rep.
+function Defaults.repView(xp)
+  local rep = xp.rep
+  return setmetatable({}, {
+    __index = function(_, key)
+      if rep.linkStyle and LINKED[key] then return xp[key] end
+      return rep[key]
+    end,
+    __newindex = function(_, key, value) rep[key] = value end,
+  })
+end
+
+-- Turning "same style" off starts the reputation bar from the XP bar's current look.
+function Defaults.unlinkRep(xp)
+  for _, key in ipairs(Defaults.LINKED_KEYS) do xp.rep[key] = Defaults.copy(xp[key]) end
+  xp.rep.linkStyle = false
+end
+
 Defaults.root = {
   version = 3,
   perCharacter = false,

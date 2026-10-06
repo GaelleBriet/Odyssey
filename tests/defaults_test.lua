@@ -151,3 +151,65 @@ test("migrate leaves a fresh or already migrated database alone", function()
   D.migrate(v3)
   eq(v3.account.texture, "flat")
 end)
+
+test("reputation settings: defaults of their own, nested in the settings", function()
+  local rep = D.settings.rep
+  eq(type(rep), "table")
+  eq(rep.rep, nil)
+  eq(rep.enabled, true)
+  eq(rep.linkStyle, true)
+  eq(rep.colorMode, "standing")
+  eq(rep.noFaction, "hide")
+  eq(rep.textLeft, "faction")
+  eq(rep.textCenter, "rep_current_max_percent")
+  eq(rep.textRight, "standing")
+  eq(rep.tooltip, { progress = true, session = true })
+  eq(rep.point, { "TOP", "OdysseyBar", "BOTTOM", 0, -8 })
+  eq(rep.texture, D.settings.texture)
+end)
+
+test("an old database gains the reputation settings", function()
+  local db = D.merge({ version = 3, account = { width = 300 }, chars = {} }, D.root)
+  eq(db.account.width, 300)
+  eq(db.account.rep.enabled, true)
+end)
+
+test("linked view: the look follows the XP bar, the rest is the reputation bar's own", function()
+  local xp = D.copy(D.settings)
+  xp.texture, xp.palette = "flat", "gold"
+  xp.rep.texture, xp.rep.width = "glossy", 300
+  local view = D.repView(xp)
+  eq(view.texture, "flat")
+  eq(view.palette, "gold")
+  eq(view.width, 300)
+  eq(view.textLeft, "faction")
+  eq(D.get(view, "tooltip.progress"), true)
+end)
+
+test("linked view writes to the reputation settings", function()
+  local xp = D.copy(D.settings)
+  local view = D.repView(xp)
+  view.width = 640
+  D.set(view, "tooltip.session", false)
+  eq(xp.rep.width, 640)
+  eq(xp.width, 480)
+  eq(xp.rep.tooltip.session, false)
+end)
+
+test("unlinked view reads the reputation bar's own look", function()
+  local xp = D.copy(D.settings)
+  xp.texture = "flat"
+  xp.rep.texture, xp.rep.linkStyle = "glossy", false
+  eq(D.repView(xp).texture, "glossy")
+end)
+
+test("unlinking starts from the XP bar's current look", function()
+  local xp = D.copy(D.settings)
+  xp.texture, xp.colors = "flat", { fill = { 1, 0, 0 } }
+  D.unlinkRep(xp)
+  eq(xp.rep.linkStyle, false)
+  eq(xp.rep.texture, "flat")
+  eq(xp.rep.colors, { fill = { 1, 0, 0 } })
+  xp.colors.fill[1] = 0
+  eq(xp.rep.colors.fill[1], 1)
+end)
