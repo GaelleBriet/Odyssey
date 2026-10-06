@@ -27,3 +27,12 @@ test("step moves toward the target without overshooting", function()
   eq(V.step(1, 0, 1), 0)
   eq(V.step(0.5, 0.5, 0.1), 0.5)
 end)
+
+test("the bar opacity scales every visibility state", function()
+  local s = settings("always", 0)
+  s.barAlpha = 0.6
+  near(V.alpha(s, {}), 0.6)
+  s.visibility, s.fadedAlpha = "mouseover", 0.5
+  near(V.alpha(s, {}), 0.3)
+  near(V.alpha(s, { hover = true }), 0.6)
+end)

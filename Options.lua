@@ -8,7 +8,7 @@ ns.Options = Options
 
 -- ------------------------------------------------------------------ model
 
-Options.ROWS = 10 -- rows per column; two columns per tab
+Options.ROWS = 11 -- rows per column; two columns per tab
 
 Options.TABS = {
   { key = "bar", label = "tab.bar" },
@@ -21,33 +21,34 @@ local function named(prefix) return function(v) return L[prefix .. tostring(v)] 
 local function percent(v) return string.format("%d %%", math.floor(v * 100 + 0.5)) end
 local OUTLINES = { "NONE", "OUTLINE", "THICKOUTLINE" }
 
--- One menu for both visibility fields: "always", or the opacity kept while not hovered.
-local function visibilityName(v)
-  if v == "always" then return L["visibility.always"] end
-  if v == 0 then return L["visibility.mouseoverHidden"] end
-  return L["visibility.mouseoverFaded"]:format(percent(v))
-end
-
+-- kind "header": a sub-section title;
+-- kind "slider": continuous value between `min` and `max`, snapped to `step`;
 -- kind "check": on/off; kind "menu": dropdown from `values` (shown through `display`) or from
 -- a `source` (presets, palettes, fonts, textures); kind "color": swatch opening the colour wheel.
 -- `account = true` writes to OdysseyDB instead of the active settings.
 -- `preset = true`: picking a value applies a preset instead of storing it.
+-- `enabledWhen = { key, value }`: the control is greyed out unless that setting has that value.
 Options.CONTROLS = {
-  -- Bar
+  -- Bar, first column: the look
   { tab = "bar", key = "preset", kind = "menu", label = "Preset", source = "presets", preset = true },
   { tab = "bar", key = "texture", kind = "menu", label = "Texture", source = "textures" },
   { tab = "bar", key = "corners", kind = "menu", label = "Corners", values = { "square", "rounded" }, display = named("corners.") },
   { tab = "bar", key = "border", kind = "menu", label = "Border", values = { "none", "thin", "thick" }, display = named("border.") },
-  { tab = "bar", key = "bgOpacity", kind = "menu", label = "Background opacity", values = { 0, 0.25, 0.5, 0.75, 0.9, 1 }, display = percent },
   { tab = "bar", key = "ticks", kind = "menu", label = "Ticks", values = { 0, 10, 20 }, display = named("ticks.") },
   { tab = "bar", key = "gloss", kind = "check", label = "Gloss" },
   { tab = "bar", key = "shadow", kind = "check", label = "Shadow" },
   { tab = "bar", key = "glow", kind = "check", label = "Glow" },
   { tab = "bar", key = "spark", kind = "check", label = "Spark" },
-  { tab = "bar", key = "width", kind = "menu", label = "Width", values = { 240, 320, 400, 480, 560, 640, 800, 1000 } },
-  { tab = "bar", key = "height", kind = "menu", label = "Height", values = { 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 32 } },
-  { tab = "bar", key = "scale", kind = "menu", label = "Scale", values = { 0.75, 0.9, 1, 1.1, 1.25, 1.5 }, display = percent },
-  { tab = "bar", key = "visibility", kind = "menu", label = "Visibility", values = { "always", 0, 0.15, 0.3, 0.5 }, display = visibilityName, composite = true },
+  { tab = "bar", key = "bgOpacity", kind = "slider", label = "Background opacity", min = 0, max = 1, step = 0.05, display = percent },
+  { tab = "bar", key = "barAlpha", kind = "slider", label = "Bar opacity", min = 0.1, max = 1, step = 0.05, display = percent },
+  -- Bar, second column: size, visibility, behaviour
+  { tab = "bar", key = "width", kind = "slider", label = "Width", min = 200, max = 1200, step = 10 },
+  { tab = "bar", key = "height", kind = "slider", label = "Height", min = 2, max = 40, step = 1 },
+  { tab = "bar", key = "scale", kind = "slider", label = "Scale", min = 0.5, max = 2, step = 0.05, display = percent },
+  { tab = "bar", key = "header.visibility", kind = "header", label = "Visibility" },
+  { tab = "bar", key = "visibility", kind = "menu", label = "Mode", values = { "always", "mouseover" }, display = named("visibility.") },
+  { tab = "bar", key = "fadedAlpha", kind = "slider", label = "Opacity when hidden", min = 0, max = 1, step = 0.05, display = percent,
+    enabledWhen = { key = "visibility", value = "mouseover" } },
   { tab = "bar", key = "maxLevelBehavior", kind = "menu", label = "At max level", values = { "hide", "show" }, display = named("max.") },
   { tab = "bar", key = "locked", kind = "check", label = "Lock bar" },
   { tab = "bar", key = "hideNativeBar", kind = "check", label = "Hide Blizzard XP bar" },
@@ -74,8 +75,8 @@ Options.CONTROLS = {
   { tab = "tooltip", key = "tooltipFont", kind = "menu", label = "Tooltip font", source = "fonts" },
   { tab = "tooltip", key = "tooltipFontSize", kind = "menu", label = "Tooltip text size", values = { 10, 11, 12, 13, 14, 16 } },
   { tab = "tooltip", key = "tooltipFontOutline", kind = "menu", label = "Tooltip text outline", values = OUTLINES, display = named("outline.") },
-  { tab = "tooltip", key = "tooltipBgOpacity", kind = "menu", label = "Tooltip background opacity", values = { 0.5, 0.7, 0.85, 0.93, 1 }, display = percent },
-  { tab = "tooltip", key = "tooltipScale", kind = "menu", label = "Tooltip scale", values = { 0.8, 0.9, 1, 1.1, 1.2, 1.3 }, display = percent },
+  { tab = "tooltip", key = "tooltipBgOpacity", kind = "slider", label = "Tooltip background opacity", min = 0, max = 1, step = 0.05, display = percent },
+  { tab = "tooltip", key = "tooltipScale", kind = "slider", label = "Tooltip scale", min = 0.5, max = 2, step = 0.05, display = percent },
   { tab = "tooltip", key = "tooltipAnchor", kind = "menu", label = "Tooltip position", values = { "bar", "cursor" }, display = named("tooltipAnchor.") },
   { tab = "tooltip", key = "tooltip.level", kind = "check", label = "opt.tooltip.level" },
   { tab = "tooltip", key = "tooltip.rested", kind = "check", label = "opt.tooltip.rested" },
@@ -108,8 +109,19 @@ function Options.choices(control)
   return items
 end
 
+-- Snaps a raw slider position to the control's step and range.
+function Options.sliderValue(control, raw)
+  local v = math.max(control.min, math.min(control.max, raw))
+  v = control.min + math.floor((v - control.min) / control.step + 0.5) * control.step
+  v = math.floor(v * 10000 + 0.5) / 10000 -- drop float noise (0.35000000000000003)
+  return math.min(control.max, v)
+end
+
 function Options.displayValue(control, value)
   if control.preset then return L["Choose…"] end
+  if control.kind == "slider" then
+    return control.display and control.display(value) or tostring(value)
+  end
   for _, item in ipairs(Options.choices(control)) do
     if item.value == value then return item.text end
   end
@@ -118,21 +130,17 @@ end
 
 -- The value a control currently shows (the visibility menu reads two fields).
 function Options.currentValue(t, control)
-  if control.composite then
-    return t.visibility == "mouseover" and (t.fadedAlpha or 0) or "always"
-  end
   return Defaults.get(t, control.key)
+end
+
+function Options.isEnabled(t, control)
+  local rule = control.enabledWhen
+  return rule == nil or Defaults.get(t, rule.key) == rule.value
 end
 
 -- Writes a picked value; a preset fills every bar field instead.
 function Options.applyValue(t, control, value)
-  if control.composite then
-    if value == "always" then
-      t.visibility = "always"
-    else
-      t.visibility, t.fadedAlpha = "mouseover", value
-    end
-  elseif control.preset then
+  if control.preset then
     Styles.applyPreset(t, value)
   else
     Defaults.set(t, control.key, value)
@@ -339,6 +347,62 @@ local function makeCheck(parent)
   return box
 end
 
+-- A slider drawn by Odyssey: drag, click on the track or use the mouse wheel.
+-- `onPick(raw)` receives the raw value under the cursor; the caller snaps it.
+local function makeSlider(parent, control, onPick)
+  local slider = CreateFrame("Frame", nil, parent)
+  slider:SetSize(WIDGET_WIDTH - 44, 18)
+  slider:EnableMouse(true)
+  slider:EnableMouseWheel(true)
+  local track = slider:CreateTexture(nil, "BACKGROUND")
+  track:SetPoint("LEFT")
+  track:SetPoint("RIGHT")
+  track:SetHeight(4)
+  track:SetColorTexture(0.25, 0.23, 0.32, 1)
+  slider.fill = slider:CreateTexture(nil, "BORDER")
+  slider.fill:SetPoint("LEFT")
+  slider.fill:SetHeight(4)
+  slider.fill:SetColorTexture(0.73, 0.55, 1, 1)
+  slider.thumb = slider:CreateTexture(nil, "ARTWORK")
+  slider.thumb:SetSize(8, 14)
+  slider.thumb:SetColorTexture(0.92, 0.9, 0.98, 1)
+  slider.text = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  slider.text:SetPoint("LEFT", slider, "RIGHT", 8, 0)
+
+  function slider:SetValue(value)
+    local fraction = (value - control.min) / (control.max - control.min)
+    fraction = math.max(0, math.min(1, fraction))
+    local width = self:GetWidth()
+    self.fill:SetWidth(math.max(1, fraction * width))
+    self.thumb:ClearAllPoints()
+    self.thumb:SetPoint("CENTER", self, "LEFT", fraction * width, 0)
+    self.text:SetText(Options.displayValue(control, value))
+    self.value = value
+  end
+
+  local function fromCursor()
+    local x = GetCursorPosition() / slider:GetEffectiveScale()
+    local left, width = slider:GetLeft(), slider:GetWidth()
+    if not left or width <= 0 then return end
+    onPick(control.min + (x - left) / width * (control.max - control.min))
+  end
+  slider:SetScript("OnMouseDown", function(self)
+    if not self.enabled then return end
+    self.dragging = true
+    fromCursor()
+  end)
+  slider:SetScript("OnMouseUp", function(self) self.dragging = false end)
+  slider:SetScript("OnHide", function(self) self.dragging = false end)
+  slider:SetScript("OnUpdate", function(self)
+    if self.dragging then fromCursor() end
+  end)
+  slider:SetScript("OnMouseWheel", function(self, delta)
+    if self.enabled and self.value then onPick(self.value + delta * control.step) end
+  end)
+  slider.enabled = true
+  return slider
+end
+
 local function makeSwatch(parent)
   local swatch = CreateFrame("Button", nil, parent)
   swatch:SetSize(40, 18)
@@ -387,7 +451,17 @@ function Options.create()
     for _, w in ipairs(widgets) do
       local c = w.control
       local value = Options.currentValue(target(c), c)
-      if c.kind == "check" then
+      if w.widget and c.enabledWhen then
+        local enabled = Options.isEnabled(target(c), c)
+        w.widget.enabled = enabled
+        w.widget:SetAlpha(enabled and 1 or 0.35)
+        w.label:SetAlpha(enabled and 1 or 0.35)
+      end
+      if c.kind == "header" then
+        -- nothing to refresh
+      elseif c.kind == "slider" then
+        w.widget:SetValue(value)
+      elseif c.kind == "check" then
         w.widget.mark:SetShown(value and true or false)
       elseif c.kind == "menu" then
         w.widget:SetText(Options.displayValue(c, value))
@@ -438,14 +512,31 @@ function Options.create()
     local x = 16 + column * COLUMN_WIDTH
     local y = TOP - index * ROW_HEIGHT
 
-    local label = page:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    local label = page:CreateFontString(nil, "ARTWORK", control.kind == "header" and "GameFontNormal" or "GameFontHighlight")
     label:SetPoint("TOPLEFT", x, y)
-    label:SetWidth(LABEL_WIDTH)
+    label:SetWidth(control.kind == "header" and (LABEL_WIDTH + WIDGET_WIDTH) or LABEL_WIDTH)
     label:SetJustifyH("LEFT")
     label:SetText(L[control.label])
 
     local widget
-    if control.kind == "check" then
+    if control.kind == "header" then
+      -- Sub-section title with a thin line under it; the following rows belong to it.
+      local line = page:CreateTexture(nil, "ARTWORK")
+      line:SetColorTexture(1, 0.82, 0, 0.35)
+      line:SetHeight(1)
+      line:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -3)
+      line:SetWidth(LABEL_WIDTH + WIDGET_WIDTH)
+    elseif control.kind == "slider" then
+      widget = makeSlider(page, control, function(raw)
+        local t = target(control)
+        local value = Options.sliderValue(control, raw)
+        if value ~= Defaults.get(t, control.key) then
+          Options.applyValue(t, control, value)
+          changed(control)
+        end
+      end)
+      widget:SetPoint("TOPLEFT", x + LABEL_WIDTH, y + 2)
+    elseif control.kind == "check" then
       widget = makeCheck(page)
       widget:SetPoint("TOPLEFT", x + LABEL_WIDTH, y + 2)
       widget:SetScript("OnClick", function()
@@ -476,7 +567,7 @@ function Options.create()
         changed(control)
       end)
     end
-    widgets[#widgets + 1] = { control = control, widget = widget }
+    widgets[#widgets + 1] = { control = control, widget = widget, label = label }
   end
 
   -- "Detailed preview": show the Shift view in the preview without holding Shift (not saved).

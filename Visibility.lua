@@ -7,10 +7,12 @@ ns.Visibility = Visibility
 local FADE_SPEED = 4 -- full fade in a quarter of a second
 
 -- state = { hover, moving, tooltip }
+-- The bar's own opacity (barAlpha) scales every state.
 function Visibility.alpha(settings, state)
-  if settings.visibility ~= "mouseover" then return 1 end
-  if state.hover or state.moving or state.tooltip or not settings.locked then return 1 end
-  return settings.fadedAlpha or 0
+  local base = settings.barAlpha or 1
+  if settings.visibility ~= "mouseover" then return base end
+  if state.hover or state.moving or state.tooltip or not settings.locked then return base end
+  return base * (settings.fadedAlpha or 0)
 end
 
 function Visibility.step(current, target, elapsed)

@@ -55,6 +55,7 @@ Defaults.settings = {
   border = "thin", -- "none", "thin" or "thick"
   borderColor = "palette", -- "palette", "black" or "gold"
   bgOpacity = 0.9,
+  barAlpha = 1, -- opacity of the whole bar
   gloss = true,
   shadow = true,
   glow = false,
