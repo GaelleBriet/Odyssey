@@ -59,6 +59,9 @@ function RepSource:onUpdate()
       self.lastGain = delta > 0 and delta or self.lastGain
     end
   else
+    -- Another faction: its session starts now (no rate mixed across factions).
+    self.sessionStart = self.api.now()
+    self.sessionGain = 0
     self.lastGain = nil
   end
   self.faction = new

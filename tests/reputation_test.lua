@@ -116,3 +116,17 @@ test("without faction IDs, a different faction name is a switch, not a gain", fu
   src:onUpdate()
   eq(src:Get().session.gained, 0)
 end)
+
+test("switching the watched faction restarts the session", function()
+  local src, state = newSource(friendly(4500))
+  state.time = 100
+  state.faction = friendly(4900)
+  src:onUpdate()
+  eq(src:Get().session.gained, 400)
+  state.time = 200
+  state.faction = { name = "Thunder Bluff", factionID = 81, standing = 4, min = 0, max = 3000, value = 2000 }
+  src:onUpdate()
+  local snap = src:Get()
+  eq(snap.session.gained, 0)
+  eq(snap.session.seconds, 0)
+end)

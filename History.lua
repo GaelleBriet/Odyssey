@@ -42,6 +42,12 @@ function History.onPlayed(store, level, total, levelTime, xpMax, now)
   local start = total - levelTime
   local cur = store.current
 
+  -- A lower level than recorded: the character was deleted and recreated with the same name.
+  if cur and level < cur.level then
+    History.reset(store)
+    cur = nil
+  end
+
   if cur and cur.level == level then
     cur.start = start
     cur.xpMax = xpMax

@@ -122,3 +122,24 @@ test("failures always carry a reason", function()
   eq({ P.copyFrom(db, "Défaut", "Défaut") }, { false, "same" })
   eq({ P.reset(db, "Nope") }, { false, "missing" })
 end)
+
+test("renaming a profile to its own name is a harmless success", function()
+  local db = newDb()
+  eq(P.rename(db, "Défaut", "Défaut"), true)
+  truthy(db.profiles["Défaut"])
+end)
+
+test("deleting the default profile hands the role to the first remaining profile", function()
+  local db = newDb()
+  db.profiles.Alpha, db.profiles.Zeta = {}, {}
+  db.profileKeys["Realm-A"] = "Zeta"
+  eq(P.delete(db, "Défaut", "Realm-A"), true)
+  eq(db.defaultProfile, "Alpha")
+end)
+
+test("a broken (non-table) profile is not copied", function()
+  local db = newDb()
+  db.profiles.Broken = "oops"
+  eq({ P.copyFrom(db, "Défaut", "Broken") }, { false, "missing" })
+  eq(db.profiles["Défaut"].width, 480)
+end)

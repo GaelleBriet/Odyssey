@@ -63,13 +63,14 @@ end
 
 function Profiles.copyFrom(db, target, from)
   if target == from then return false, "same" end
-  if not db.profiles[target] or not db.profiles[from] then return false, "missing" end
+  if not db.profiles[target] or type(db.profiles[from]) ~= "table" then return false, "missing" end
   db.profiles[target] = Defaults.copy(db.profiles[from])
   return true
 end
 
 function Profiles.rename(db, old, new)
   if not db.profiles[old] then return false, "missing" end
+  if trim(new) == old then return true, old end
   local valid, err = validNewName(db, new)
   if not valid then return false, err end
   db.profiles[valid], db.profiles[old] = db.profiles[old], nil
@@ -90,7 +91,7 @@ function Profiles.delete(db, name, charKey)
     if chosen == name then db.profileKeys[key] = nil end
   end
   if db.defaultProfile == name then
-    db.defaultProfile = Profiles.activeName(db, charKey)
+    db.defaultProfile = Profiles.list(db)[1]
   end
   return true
 end
