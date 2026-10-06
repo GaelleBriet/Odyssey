@@ -145,3 +145,28 @@ function Palettes.colors(key, ctx)
   end
   return colors
 end
+
+local BORDER_COLORS = { black = { 0, 0, 0 }, gold = { 0.85, 0.68, 0.28 } }
+local OVERRIDABLE = { "rested", "quest", "bg", "border", "text" }
+
+local function isColor(c)
+  return type(c) == "table" and type(c[1]) == "number" and type(c[2]) == "number" and type(c[3]) == "number"
+end
+
+-- The colours actually drawn: the palette, then the border colour choice, then the user's
+-- per-element overrides (settings.colors). A fill override becomes a 75 % -> 100 % gradient.
+function Palettes.effective(key, ctx, settings)
+  local colors = Palettes.colors(key, ctx)
+  local border = BORDER_COLORS[settings.borderColor]
+  if border then colors.border = copy(border) end
+  local overrides = type(settings.colors) == "table" and settings.colors or {}
+  local fill = overrides.fill
+  if isColor(fill) then
+    colors.fill = { from = { fill[1] * 0.75, fill[2] * 0.75, fill[3] * 0.75 }, to = copy(fill) }
+    colors.accent = copy(fill)
+  end
+  for _, part in ipairs(OVERRIDABLE) do
+    if isColor(overrides[part]) then colors[part] = copy(overrides[part]) end
+  end
+  return colors
+end
