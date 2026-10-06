@@ -118,3 +118,48 @@ test("hiding the native bar sets its alpha", function()
     eq(alpha, 1)
   end)
 end)
+
+test("watched faction through the modern API", function()
+  withGlobals({
+    C_Reputation = { GetWatchedFactionData = function()
+      return { name = "Orgrimmar", factionID = 76, reaction = 5, currentReactionThreshold = 3000,
+        nextReactionThreshold = 9000, currentStanding = 4500 }
+    end },
+    GetWatchedFactionInfo = false,
+  }, function()
+    eq(Compat.watchedFaction(), { name = "Orgrimmar", factionID = 76, standing = 5, min = 3000, max = 9000, value = 4500 })
+  end)
+end)
+
+test("watched faction through the classic API", function()
+  withGlobals({
+    C_Reputation = false,
+    GetWatchedFactionInfo = function() return "Orgrimmar", 5, 3000, 9000, 4500, 76 end,
+  }, function()
+    eq(Compat.watchedFaction(), { name = "Orgrimmar", factionID = 76, standing = 5, min = 3000, max = 9000, value = 4500 })
+  end)
+end)
+
+test("no watched faction, no API, or a throwing API gives nil", function()
+  withGlobals({ C_Reputation = false, GetWatchedFactionInfo = function() return nil end }, function()
+    eq(Compat.watchedFaction(), nil)
+  end)
+  withGlobals({ C_Reputation = false, GetWatchedFactionInfo = false }, function()
+    eq(Compat.watchedFaction(), nil)
+  end)
+  withGlobals({ C_Reputation = { GetWatchedFactionData = function() error("boom") end }, GetWatchedFactionInfo = false }, function()
+    eq(Compat.watchedFaction(), nil)
+  end)
+end)
+
+test("standing label and colour come from the game, with fallbacks", function()
+  withGlobals({ FACTION_STANDING_LABEL5 = "Amical", FACTION_BAR_COLORS = { [5] = { r = 0, g = 0.6, b = 0.1 } } }, function()
+    eq(Compat.standingLabel(5), "Amical")
+    eq(Compat.standingColor(5), { 0, 0.6, 0.1 })
+  end)
+  withGlobals({ FACTION_STANDING_LABEL5 = false, FACTION_BAR_COLORS = false }, function()
+    eq(Compat.standingLabel(5), "5")
+    eq(#Compat.standingColor(5), 3)
+    eq(#Compat.standingColor(99), 3)
+  end)
+end)

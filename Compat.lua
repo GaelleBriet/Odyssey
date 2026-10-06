@@ -93,3 +93,53 @@ function Compat.setNativeXPBarHidden(hidden)
   local frame = MainMenuExpBar or StatusTrackingBarManager
   if frame and frame.SetAlpha then frame:SetAlpha(hidden and 0 or 1) end
 end
+
+-- ---------------------------------------------------------------- reputation
+
+local function readWatched()
+  if C_Reputation and C_Reputation.GetWatchedFactionData then
+    local data = C_Reputation.GetWatchedFactionData()
+    if not data or not data.name then return nil end
+    return {
+      name = data.name, factionID = data.factionID, standing = data.reaction,
+      min = data.currentReactionThreshold, max = data.nextReactionThreshold, value = data.currentStanding,
+    }
+  end
+  if GetWatchedFactionInfo then
+    local name, standing, min, max, value, factionID = GetWatchedFactionInfo()
+    if not name then return nil end
+    return { name = name, factionID = factionID, standing = standing, min = min, max = max, value = value }
+  end
+  return nil
+end
+
+-- The faction shown "as experience bar" in the game, or nil; modern and classic APIs.
+function Compat.watchedFaction()
+  local ok, faction = pcall(readWatched)
+  if not ok then
+    Compat.missing.reputation = tostring(faction)
+    return nil
+  end
+  return faction
+end
+
+function Compat.standingLabel(standing)
+  return _G["FACTION_STANDING_LABEL" .. tostring(standing)] or tostring(standing)
+end
+
+-- Hated .. Exalted, used when the game does not expose FACTION_BAR_COLORS.
+local STANDING_COLORS = {
+  { 0.8, 0.13, 0.13 }, { 0.8, 0.13, 0.13 }, { 0.75, 0.27, 0 }, { 0.9, 0.7, 0 },
+  { 0, 0.6, 0.1 }, { 0, 0.6, 0.1 }, { 0, 0.6, 0.1 }, { 0, 0.6, 0.1 },
+}
+
+function Compat.standingColor(standing)
+  local c = FACTION_BAR_COLORS and FACTION_BAR_COLORS[standing]
+  if c then return { c.r, c.g, c.b } end
+  local fallback = STANDING_COLORS[standing] or STANDING_COLORS[4]
+  return { fallback[1], fallback[2], fallback[3] }
+end
+
+function Compat.repApi()
+  return { watched = Compat.watchedFaction, label = Compat.standingLabel, now = GetTime }
+end
