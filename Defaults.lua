@@ -193,6 +193,13 @@ end
 
 -- v4: settings live in named profiles. The account settings become the default profile;
 -- characters that used their own settings ("per character" on) get a profile of their own.
+-- "Realm-Name" (the character key) -> "Name - Realm", the profile name shown to the player.
+local function characterProfileName(key)
+  local realm, name = key:match("^(.*)%-([^-]+)$")
+  if not realm then return key end
+  return name .. " - " .. realm
+end
+
 local function migrateV3(db, defaultName)
   db.profiles = type(db.profiles) == "table" and db.profiles or {}
   db.profileKeys = type(db.profileKeys) == "table" and db.profileKeys or {}
@@ -204,8 +211,9 @@ local function migrateV3(db, defaultName)
     for key, data in pairs(db.chars) do
       if type(data) == "table" then
         if db.perCharacter and type(data.settings) == "table" then
-          db.profiles[key] = data.settings
-          db.profileKeys[key] = key
+          local profileName = characterProfileName(key)
+          db.profiles[profileName] = data.settings
+          db.profileKeys[key] = profileName
         end
         data.settings = nil
       end

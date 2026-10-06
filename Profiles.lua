@@ -48,7 +48,7 @@ function Profiles.active(db, charKey, defaultName)
 end
 
 function Profiles.use(db, charKey, name)
-  if not db.profiles[name] then return false end
+  if not db.profiles[name] then return false, "missing" end
   db.profileKeys[charKey] = name
   return true
 end
@@ -62,7 +62,8 @@ function Profiles.create(db, name, source)
 end
 
 function Profiles.copyFrom(db, target, from)
-  if not db.profiles[target] or not db.profiles[from] or target == from then return false end
+  if target == from then return false, "same" end
+  if not db.profiles[target] or not db.profiles[from] then return false, "missing" end
   db.profiles[target] = Defaults.copy(db.profiles[from])
   return true
 end
@@ -95,7 +96,7 @@ function Profiles.delete(db, name, charKey)
 end
 
 function Profiles.reset(db, name)
-  if not db.profiles[name] then return false end
+  if not db.profiles[name] then return false, "missing" end
   db.profiles[name] = Defaults.copy(Defaults.settings)
   return true
 end

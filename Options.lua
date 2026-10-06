@@ -145,7 +145,7 @@ Options.CONTROLS = {
   c("profiles", "manage", "profile.fromDefaults", "check", "Start from defaults", { ui = true }),
   c("profiles", "manage", "profile.copyFrom", "menu", "Copy from", { source = "otherProfiles", profile = "copyFrom", pick = true, confirm = true }),
   c("profiles", "manage", "profile.rename", "input", "Rename", { profile = "rename" }),
-  c("profiles", "manage", "action.resetProfile", "action", "Reset profile", { action = "resetProfile", confirm = true }),
+  c("profiles", "manage", "action.resetProfile", "action", "Reset profile", { profile = "reset", confirm = true }),
   c("profiles", "manage", "profile.delete", "menu", "Delete profile", { source = "otherProfiles", profile = "delete", pick = true, confirm = true }),
 }
 
@@ -291,7 +291,6 @@ Options.ACTIONS = {
     if bar == "rep" then ns.repSource:resetSession() else ns.source:resetSession() end
     print("|cff9966ffOdyssey|r: " .. L["Session reset."])
   end,
-  resetProfile = function() Options.profileAction("reset") end,
   centerX = function(bar) (bar == "rep" and ns.repBar or ns.bar):CenterHorizontally() end,
   clearHistory = function(_)
     History.reset(ns.CharData().history)
@@ -802,8 +801,12 @@ local function buildRow(card, control, y, bar)
       end
       disarm(self)
       self:SetText(L[control.label])
-      Options.ACTIONS[control.action](bar)
-      changed(control)
+      if control.profile then
+        runProfile(control.profile)
+      else
+        Options.ACTIONS[control.action](bar)
+        changed(control)
+      end
     end)
   elseif control.kind == "input" then
     widget = makeInput(card, function(text) return runProfile(control.profile, text) end)
@@ -1037,6 +1040,10 @@ function refresh()
       if w.widget.reset then w.widget.reset.enabled = enabled end
     end
     if c.kind == "color" then colors = barObject(w.bar).colors or colors end
+    if w.widget and w.widget.armed then
+      disarm(w.widget)
+      if c.kind == "action" then w.widget:SetText(L[c.label]) end
+    end
     if c.kind == "slider" then
       w.widget:SetValue(value)
     elseif c.kind == "check" then

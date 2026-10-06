@@ -114,3 +114,11 @@ test("list is sorted", function()
   db.profiles.Zeta, db.profiles.Alpha = {}, {}
   eq(P.list(db), { "Alpha", "Défaut", "Zeta" })
 end)
+
+test("failures always carry a reason", function()
+  local db = newDb()
+  eq({ P.use(db, "Realm-A", "Nope") }, { false, "missing" })
+  eq({ P.copyFrom(db, "Défaut", "Nope") }, { false, "missing" })
+  eq({ P.copyFrom(db, "Défaut", "Défaut") }, { false, "same" })
+  eq({ P.reset(db, "Nope") }, { false, "missing" })
+end)
