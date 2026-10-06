@@ -6,6 +6,7 @@ loadAddonFile("History.lua", ns)
 loadAddonFile("Texts.lua", ns)
 loadAddonFile("Styles.lua", ns)
 loadAddonFile("Fonts.lua", ns)
+loadAddonFile("Profiles.lua", ns)
 loadAddonFile("Options.lua", ns)
 local Options, Defaults = ns.Options, ns.Defaults
 
@@ -17,14 +18,14 @@ local function section(key)
   for _, s in ipairs(Options.SECTIONS) do if s.key == key then return s end end
 end
 
-local KINDS = { check = true, menu = true, color = true, slider = true, action = true, info = true }
+local KINDS = { check = true, menu = true, color = true, slider = true, action = true, info = true, input = true }
 
 -- ------------------------------------------------------------- layout model
 
-test("five sections in the sidebar", function()
+test("six sections in the sidebar", function()
   local keys = {}
   for _, s in ipairs(Options.SECTIONS) do keys[#keys + 1] = s.key end
-  eq(keys, { "bar", "colors", "texts", "tooltip", "general" })
+  eq(keys, { "bar", "colors", "texts", "tooltip", "general", "profiles" })
 end)
 
 test("bar, colours and texts show the bar preview; tooltip shows the tooltip preview", function()
@@ -71,7 +72,8 @@ test("cards follow the validated layout", function()
   eq(cardOf("textPosition"), "texts/content")
   eq(cardOf("tooltipAnchor"), "tooltip/window")
   eq(cardOf("tooltip.history"), "tooltip/blocks")
-  eq(cardOf("perCharacter"), "general/behaviour")
+  eq(cardOf("profile.active"), "profiles/active")
+  eq(cardOf("profile.delete"), "profiles/manage")
   eq(cardOf("action.clearHistory"), "general/data")
 end)
 
@@ -84,7 +86,9 @@ test("every customization has exactly one control", function()
     "textLeft", "textCenter", "textRight", "textPosition", "barFont", "barFontSize", "barFontOutline", "abbreviate",
     "tooltipFont", "tooltipFontSize", "tooltipFontOutline", "tooltipBgOpacity", "tooltipScale", "tooltipAnchor",
     "tooltip.level", "tooltip.rested", "tooltip.quests", "tooltip.kills", "tooltip.session", "tooltip.played", "tooltip.history",
-    "locked", "hideNativeBar", "maxLevelBehavior", "perCharacter",
+    "locked", "hideNativeBar", "maxLevelBehavior",
+    "profile.active", "profile.new", "profile.fromDefaults", "profile.copyFrom", "profile.rename",
+    "action.resetProfile", "profile.delete",
     "action.resetColors", "action.resetSession", "action.clearHistory", "info.version",
   }) do
     truthy(control(key), key)
@@ -275,4 +279,58 @@ test("the reputation colours stay editable while its style follows the XP bar", 
   for _, key in ipairs({ "palette", "borderColor", "colorMode", "colors.fill", "action.resetColors" }) do
     eq(Options.isEnabled({ linkStyle = true }, control(key), "rep"), true)
   end
+end)
+
+-- -------------------------------------------------------------- profiles
+
+local function withProfiles(fn)
+  local savedDb, savedKey = _G.OdysseyDB, ns.CharKey
+  _G.OdysseyDB = { profiles = { ["Défaut"] = Defaults.copy(Defaults.settings), Raid = Defaults.copy(Defaults.settings) },
+    profileKeys = {}, defaultProfile = "Défaut" }
+  ns.CharKey = function() return "Realm-A" end
+  local ok, err = pcall(fn, _G.OdysseyDB)
+  _G.OdysseyDB, ns.CharKey = savedDb, savedKey
+  if not ok then error(err, 0) end
+end
+
+test("the per-character checkbox is gone", function()
+  eq(control("perCharacter"), nil)
+end)
+
+test("profile menus list every profile, or the others", function()
+  withProfiles(function()
+    eq(Options.choices(control("profile.active")), { { value = "Défaut", text = "Défaut" }, { value = "Raid", text = "Raid" } })
+    eq(Options.choices(control("profile.delete")), { { value = "Raid", text = "Raid" } })
+    eq(Options.choices(control("profile.copyFrom")), { { value = "Raid", text = "Raid" } })
+  end)
+end)
+
+test("the active profile menu shows the profile in use; pick menus show Choose", function()
+  withProfiles(function()
+    eq(Options.displayValue(control("profile.active"), Options.currentValue(nil, control("profile.active"))), "Défaut")
+    eq(Options.displayValue(control("profile.delete"), nil), "Choose…")
+  end)
+end)
+
+test("profile actions: use, create, copy, rename, reset, delete", function()
+  withProfiles(function(db)
+    eq(Options.profileAction("use", "Raid"), true)
+    eq(db.profileKeys["Realm-A"], "Raid")
+    eq(Options.profileAction("create", "Neuf", { fromDefaults = true }), true)
+    eq(db.profiles.Neuf.width, Defaults.settings.width)
+    db.profiles.Raid.width = 777
+    eq(Options.profileAction("create", "Clone"), true)
+    eq(db.profiles.Clone.width, 777) -- from the active profile
+    eq(Options.profileAction("copyFrom", "Neuf"), true)
+    eq(db.profiles.Raid.width, Defaults.settings.width)
+    eq(Options.profileAction("rename", "Raid 2"), true)
+    eq(db.profileKeys["Realm-A"], "Raid 2")
+    db.profiles["Raid 2"].width = 5
+    eq(Options.profileAction("reset"), true)
+    eq(db.profiles["Raid 2"].width, Defaults.settings.width)
+    eq(Options.profileAction("delete", "Clone"), true)
+    eq(db.profiles.Clone, nil)
+    eq({ Options.profileAction("delete", "Raid 2") }, { false, "active" })
+    eq({ Options.profileAction("create", "Neuf") }, { false, "exists" })
+  end)
 end)

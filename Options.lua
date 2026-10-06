@@ -1,6 +1,6 @@
 local ADDON, ns = ...
-local Defaults, History, Texts, Styles, Palettes, Fonts =
-  ns.Defaults, ns.History, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts
+local Defaults, History, Texts, Styles, Palettes, Fonts, Profiles =
+  ns.Defaults, ns.History, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts, ns.Profiles
 local L = ns.L
 
 local Options = {}
@@ -38,7 +38,18 @@ Options.SECTIONS = {
     { key = "data", label = "card.data" },
     { key = "about", label = "card.about" },
   } },
+  { key = "profiles", label = "section.profiles", cards = {
+    { key = "active", label = "card.activeProfile" },
+    { key = "manage", label = "card.manageProfiles" },
+  } },
 }
+
+-- Settings-window state that is not saved (e.g. "start from defaults" for a new profile).
+Options.uiState = {}
+
+local function activeProfileName()
+  return Profiles.activeName(OdysseyDB, ns.CharKey())
+end
 
 -- kind "menu": dropdown from `values` (shown through `display`) or a `source`
 --   (presets, palettes, fonts, textures); `preset = true` applies a preset instead of storing;
@@ -121,10 +132,20 @@ Options.CONTROLS = {
   c("general", "behaviour", "locked", "check", "Lock bar"),
   c("general", "behaviour", "hideNativeBar", "check", "Hide Blizzard XP bar", { bars = { "xp" } }),
   c("general", "behaviour", "maxLevelBehavior", "menu", "At max level", { values = { "hide", "show" }, display = named("max."), bars = { "xp" } }),
-  c("general", "behaviour", "perCharacter", "check", "Settings per character", { account = true }),
+
   c("general", "data", "action.resetSession", "action", "Reset session", { action = "resetSession" }),
   c("general", "data", "action.clearHistory", "action", "Clear history", { action = "clearHistory" }),
   c("general", "about", "info.version", "info", "Version", { info = "version" }),
+
+  -- `profile` names the Options.profileAction run by the control; `pick` menus have no
+  -- current value; `confirm` asks for a second click; `ui` values live in Options.uiState.
+  c("profiles", "active", "profile.active", "menu", "Profile", { source = "profiles", profile = "use", get = activeProfileName }),
+  c("profiles", "manage", "profile.new", "input", "New profile", { profile = "create" }),
+  c("profiles", "manage", "profile.fromDefaults", "check", "Start from defaults", { ui = true }),
+  c("profiles", "manage", "profile.copyFrom", "menu", "Copy from", { source = "otherProfiles", profile = "copyFrom", pick = true, confirm = true }),
+  c("profiles", "manage", "profile.rename", "input", "Rename", { profile = "rename" }),
+  c("profiles", "manage", "action.resetProfile", "action", "Reset profile", { action = "resetProfile", confirm = true }),
+  c("profiles", "manage", "profile.delete", "menu", "Delete profile", { source = "otherProfiles", profile = "delete", pick = true, confirm = true }),
 }
 
 -- The controls that apply to one bar ("xp" or "rep").
@@ -150,6 +171,11 @@ function Options.choices(control, bar)
     for _, key in ipairs(Palettes.list) do items[#items + 1] = { value = key, text = L["palette." .. key] } end
   elseif control.source == "fonts" then
     for _, f in ipairs(Fonts.list(Fonts.lsm())) do items[#items + 1] = { value = f.name, text = f.name, font = f.path } end
+  elseif control.source == "profiles" or control.source == "otherProfiles" then
+    local active = activeProfileName()
+    for _, name in ipairs(Profiles.list(OdysseyDB)) do
+      if control.source == "profiles" or name ~= active then items[#items + 1] = { value = name, text = name } end
+    end
   elseif control.source == "textures" then
     for _, t in ipairs(Styles.textureList(Fonts.lsm())) do
       local text = t.source == "odyssey" and L["texture." .. t.value] or t.value
@@ -173,7 +199,7 @@ function Options.sliderValue(control, raw)
 end
 
 function Options.displayValue(control, value, bar)
-  if control.preset then return L["Choose…"] end
+  if control.preset or control.pick then return L["Choose…"] end
   if control.kind == "slider" then
     return control.display and control.display(value) or tostring(value)
   end
@@ -184,7 +210,25 @@ function Options.displayValue(control, value, bar)
 end
 
 function Options.currentValue(t, control)
+  if control.get then return control.get() end
+  if control.ui then return Options.uiState[control.key] end
   return Defaults.get(t, settingKey(control))
+end
+
+-- Runs a profile operation for the current character. Returns true, or false and a reason
+-- ("empty", "exists", "active", "last", "missing").
+function Options.profileAction(action, value, opts)
+  local db, key = OdysseyDB, ns.CharKey()
+  local active = Profiles.activeName(db, key)
+  if action == "use" then return Profiles.use(db, key, value) end
+  if action == "create" then
+    return Profiles.create(db, value, not (opts and opts.fromDefaults) and db.profiles[active] or nil)
+  end
+  if action == "copyFrom" then return Profiles.copyFrom(db, active, value) end
+  if action == "rename" then return Profiles.rename(db, active, value) end
+  if action == "reset" then return Profiles.reset(db, active) end
+  if action == "delete" then return Profiles.delete(db, value, key) end
+  return false, "missing"
 end
 
 -- Greyed out: an `enabledWhen` rule not met, or a look setting of the reputation bar while
@@ -197,7 +241,9 @@ end
 
 -- Ticks a checkbox. Unticking "same style" copies the XP bar's look first.
 function Options.setCheck(t, control, value, xp)
-  if control.key == "linkStyle" and not value then
+  if control.ui then
+    Options.uiState[control.key] = value
+  elseif control.key == "linkStyle" and not value then
     Defaults.unlinkRep(xp)
   else
     Defaults.set(t, settingKey(control), value)
@@ -244,6 +290,7 @@ Options.ACTIONS = {
     if bar == "rep" then ns.repSource:resetSession() else ns.source:resetSession() end
     print("|cff9966ffOdyssey|r: " .. L["Session reset."])
   end,
+  resetProfile = function() Options.profileAction("reset") end,
   clearHistory = function(_)
     History.reset(ns.CharData().history)
     print("|cff9966ffOdyssey|r: " .. L["History cleared."])
@@ -597,6 +644,80 @@ local function changed(control)
   ns.Refresh() -- redraws the bars, then calls Options.Refresh for the window and previews
 end
 
+local function say(text) print("|cff9966ffOdyssey|r: " .. text) end
+
+local PROFILE_MESSAGES = {
+  use = "Now using profile \"%s\".", create = "Profile \"%s\" created.", copyFrom = "Copied from \"%s\".",
+  rename = "Profile renamed to \"%s\".", delete = "Profile \"%s\" deleted.",
+}
+
+-- Runs a profile operation, tells the player how it went, and redraws everything.
+local function runProfile(action, value)
+  local ok, result = Options.profileAction(action, value, { fromDefaults = Options.uiState["profile.fromDefaults"] })
+  if ok then
+    local name = type(result) == "string" and result or value
+    if action == "reset" then say(L["Profile reset."]) else say(L[PROFILE_MESSAGES[action]]:format(name or "")) end
+  else
+    say(L["profile.err." .. tostring(result)])
+  end
+  changed({})
+  return ok
+end
+
+-- Two-click confirmation: the first click arms the button for a few seconds.
+local CONFIRM_SECONDS = 4
+local function arm(button, text)
+  button.armed = true
+  button.armedText = button.label:GetText()
+  button:SetText(text)
+  local token = {}
+  button.armToken = token
+  local after = C_Timer and C_Timer.After
+  if after then
+    after(CONFIRM_SECONDS, function()
+      if button.armToken == token then
+        button.armed, button.pendingValue = false, nil
+        button:SetText(button.armedText)
+      end
+    end)
+  end
+end
+local function disarm(button)
+  button.armed, button.pendingValue, button.armToken = false, nil, nil
+end
+
+-- Flat text field with an OK button; Enter or OK submits.
+local function makeInput(parent, onSubmit)
+  local box = CreateFrame("EditBox", nil, parent)
+  box:SetSize(WIDGET_WIDTH - 34, 20)
+  box:SetAutoFocus(false)
+  box:SetMaxLetters(40)
+  local edge = solid(box, "BACKGROUND", C.widgetEdge)
+  edge:SetAllPoints()
+  local bg = solid(box, "BORDER", { 0.07, 0.07, 0.1, 1 })
+  bg:SetPoint("TOPLEFT", 1, -1)
+  bg:SetPoint("BOTTOMRIGHT", -1, 1)
+  local font = fontString(box, 11, C.text)
+  box:SetFontObject(font:GetFontObject() or GameFontHighlightSmall)
+  font:Hide()
+  local path = font:GetFont()
+  if path then box:SetFont(path, 11, "") end
+  box:SetTextColor(C.text[1], C.text[2], C.text[3], 1)
+  box:SetTextInsets(6, 6, 0, 0)
+  local ok = flatButton(parent, 30, 20, "OK")
+  ok:SetPoint("LEFT", box, "RIGHT", 4, 0)
+  local function submit()
+    local text = box:GetText()
+    box:ClearFocus()
+    if onSubmit(text) then box:SetText("") end
+  end
+  box:SetScript("OnEnterPressed", submit)
+  box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  ok:SetScript("OnClick", submit)
+  box.ok = ok
+  return box
+end
+
 -- One row of a card: label on the left, widget on the right.
 local function buildRow(card, control, y, bar)
   local label = fontString(card, 12, C.text)
@@ -624,9 +745,22 @@ local function buildRow(card, control, y, bar)
     widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 1)
     widget:SetScript("OnClick", function(self)
       if self.enabled == false then return end
+      if self.armed then
+        local value = self.pendingValue
+        disarm(self)
+        runProfile(control.profile, value)
+        return
+      end
       openMenu(self, control, Options.currentValue(target(control, bar), control), function(value)
-        Options.applyValue(target(control, bar), control, value)
-        changed(control)
+        if control.profile and control.confirm then
+          self.pendingValue = value
+          arm(self, L["Confirm?"] .. " " .. value)
+        elseif control.profile then
+          runProfile(control.profile, value)
+        else
+          Options.applyValue(target(control, bar), control, value)
+          changed(control)
+        end
       end, bar)
     end)
   elseif control.kind == "slider" then
@@ -660,9 +794,18 @@ local function buildRow(card, control, y, bar)
     widget:SetPoint("TOPLEFT", 12, y - 1)
     widget:SetScript("OnClick", function(self)
       if self.enabled == false then return end
+      if control.confirm and not self.armed then
+        arm(self, L["Confirm?"])
+        return
+      end
+      disarm(self)
+      self:SetText(L[control.label])
       Options.ACTIONS[control.action](bar)
       changed(control)
     end)
+  elseif control.kind == "input" then
+    widget = makeInput(card, function(text) return runProfile(control.profile, text) end)
+    widget:SetPoint("TOPLEFT", card, "TOPLEFT", right - WIDGET_WIDTH, y - 1)
   elseif control.kind == "info" then
     widget = fontString(card, 12, C.muted)
     widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 4)

@@ -1,11 +1,14 @@
 local ADDON, ns = ...
-local Defaults, Compat, History = ns.Defaults, ns.Compat, ns.History
+local Defaults, Compat, History, Profiles = ns.Defaults, ns.Compat, ns.History, ns.Profiles
 local L = ns.L
 
 -- ---------------------------------------------------------------- saved data
 
+-- "Realm-Name", computed once (settings are read every frame).
+local charKey
 function ns.CharKey()
-  return GetRealmName() .. "-" .. UnitName("player")
+  if not charKey then charKey = GetRealmName() .. "-" .. UnitName("player") end
+  return charKey
 end
 
 local historyChecked = {} -- per session: saved history is repaired once per character
@@ -18,18 +21,27 @@ function ns.CharData()
     data.history = History.sanitize(data.history)
     historyChecked[key] = true
   end
-  if data.settings ~= nil and type(data.settings) ~= "table" then data.settings = nil end
   return data
 end
 
--- The active settings: per character when the account asks for it, otherwise account-wide.
+-- Profiles already completed with the current defaults this session (weak keys: a profile
+-- replaced by a copy or a reset is completed again on first use).
+local mergedProfiles = setmetatable({}, { __mode = "k" })
+
+-- The active settings: the profile this character uses.
 function ns.Settings()
-  if OdysseyDB.perCharacter then
-    local data = ns.CharData()
-    if not data.settings then data.settings = Defaults.copy(OdysseyDB.account) end
-    return data.settings
+  local db = OdysseyDB
+  local name = Profiles.activeName(db, ns.CharKey(), L["Default"])
+  local profile = db.profiles[name]
+  if type(profile) ~= "table" then
+    profile = Defaults.copy(Defaults.settings)
+    db.profiles[name] = profile
   end
-  return OdysseyDB.account
+  if not mergedProfiles[profile] then
+    Defaults.merge(profile, Defaults.settings)
+    mergedProfiles[profile] = true
+  end
+  return profile
 end
 
 -- The reputation bar's settings, seen through the "same style as the XP bar" link.
@@ -134,12 +146,11 @@ frame:SetScript("OnEvent", function(_, event, ...)
     if ... ~= ADDON then return end
     frame:UnregisterEvent("ADDON_LOADED")
     if type(OdysseyDB) ~= "table" then OdysseyDB = {} end
-    Defaults.migrate(OdysseyDB)
+    Defaults.migrate(OdysseyDB, L["Default"])
     Defaults.merge(OdysseyDB, Defaults.root)
     frame:RegisterEvent("PLAYER_LOGIN")
   elseif event == "PLAYER_LOGIN" then
     frame:UnregisterEvent("PLAYER_LOGIN")
-    Defaults.merge(ns.Settings(), Defaults.settings)
     ns.CharData()
     ns.Fonts.registerBundled(ns.Fonts.lsm())
     ns.source = ns.XPSource.new(Compat.xpApi())

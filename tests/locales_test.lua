@@ -40,9 +40,12 @@ end)
 test("every option label and menu choice has a real translation", function()
   local ns = newNamespace()
   loadAddonFile("Locales/enUS.lua", ns)
-  for _, file in ipairs({ "Calc.lua", "Defaults.lua", "History.lua", "Texts.lua", "Styles.lua", "Fonts.lua", "Options.lua" }) do
+  for _, file in ipairs({ "Calc.lua", "Defaults.lua", "History.lua", "Texts.lua", "Styles.lua", "Fonts.lua", "Profiles.lua", "Options.lua" }) do
     loadAddonFile(file, ns)
   end
+  local savedDb = _G.OdysseyDB
+  _G.OdysseyDB = { profiles = { Main = {} }, profileKeys = {}, defaultProfile = "Main" }
+  ns.CharKey = function() return "Realm-A" end
   local untranslated = {}
   local function check(text, where)
     if rawget(ns.L, text) == nil and text:match("^[%a]+%.[%w_]+$") then
@@ -63,5 +66,6 @@ test("every option label and menu choice has a real translation", function()
       if rawget(ns.L, card.label) == nil then untranslated[#untranslated + 1] = "card: " .. card.label end
     end
   end
+  _G.OdysseyDB = savedDb
   eq(untranslated, {})
 end)

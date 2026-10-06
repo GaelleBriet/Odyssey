@@ -11,4 +11,5 @@
 - Leveling history: time and XP per hour for each level, compared with your own average.
 - Reputation bar for the watched faction, coloured by standing or palette, with its own settings or the XP bar's style.
 - Odyssey's own settings window with live previews.
+- Named profiles shared between characters.
 - English and French.

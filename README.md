@@ -17,6 +17,8 @@
   (Nunito, Barlow Condensed, Cinzel, Inter) and every font other addons share through LibSharedMedia.
 - A **clean tooltip**: the essentials in three short groups; hold **Shift** for the details
   (quest-by-quest XP, kills to level, session, time per level, leveling history).
+- **Profiles**: every character uses a named profile (XP and reputation settings); create, copy, rename,
+  reset and delete them from the settings window.
 - A **leveling history**: how long each level took and how your current pace compares with your own average.
 
 ## Usage
