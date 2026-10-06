@@ -1,6 +1,6 @@
 local ADDON, ns = ...
-local Calc, Texts, Styles, Palettes, Fonts, Visibility =
-  ns.Calc, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts, ns.Visibility
+local Calc, Texts, Styles, Palettes, Fonts, Visibility, TooltipContent =
+  ns.Calc, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts, ns.Visibility, ns.TooltipContent
 
 local Bar = {}
 Bar.__index = Bar
@@ -40,16 +40,20 @@ local function setFont(fs, s, prefix)
     Fonts.flags(s[prefix .. "FontOutline"]))
 end
 
+-- opts.kind = "xp" (default) or "rep"; opts.settings() returns the settings table to use
+-- (the XP settings, or the reputation view); opts.name names the frame.
 -- opts.parent + opts.width make a preview bar (inside the settings window): same drawing,
 -- no dragging, no tooltip, no visibility fading, no effect on the Blizzard bar.
 function Bar.create(source, opts)
   opts = opts or {}
   local self = setmetatable({}, Bar)
   self.source = source
+  self.kind = opts.kind or "xp"
+  self.settings = opts.settings or ns.Settings
   self.preview = opts.parent ~= nil
   self.previewWidth = opts.width
 
-  local f = CreateFrame("Frame", (not self.preview) and "OdysseyBar" or nil, opts.parent or UIParent)
+  local f = CreateFrame("Frame", (not self.preview) and (opts.name or "OdysseyBar") or nil, opts.parent or UIParent)
   self.frame = f
   if not self.preview then
     f:SetFrameStrata("MEDIUM")
@@ -117,7 +121,7 @@ function Bar.create(source, opts)
 
   if not self.preview then
   f:SetScript("OnDragStart", function()
-    if not ns.Settings().locked then
+    if not self.settings().locked then
       self.state.moving = true
       f:StartMoving()
     end
@@ -125,11 +129,11 @@ function Bar.create(source, opts)
   f:SetScript("OnDragStop", function()
     f:StopMovingOrSizing()
     self.state.moving = false
-    if not ns.Settings().locked then self:SavePosition() end
+    if not self.settings().locked then self:SavePosition() end
   end)
   f:SetScript("OnEnter", function()
     self.state.hover = true
-    if ns.Tooltip then ns.Tooltip.Show(f) end
+    if ns.Tooltip then ns.Tooltip.Show(f, self) end
   end)
   f:SetScript("OnLeave", function()
     self.state.hover = false
@@ -150,7 +154,7 @@ end
 function Bar:SavePosition()
   local point, relativeTo, relativePoint, x, y = self.frame:GetPoint()
   local relativeName = (relativeTo and relativeTo.GetName and relativeTo:GetName()) or "UIParent"
-  ns.Settings().point = { point, relativeName, relativePoint, x, y }
+  self.settings().point = { point, relativeName, relativePoint, x, y }
 end
 
 function Bar:SetMasked(masked)
@@ -163,7 +167,7 @@ function Bar:SetMasked(masked)
 end
 
 function Bar:ApplySettings()
-  local s = ns.Settings()
+  local s = self.settings()
   local f = self.frame
   local width = self.preview and self.previewWidth or s.width
   f:SetSize(width, s.height)
@@ -308,23 +312,47 @@ function Bar:Layout()
   end
 end
 
+-- Whether the bar is shown at all (outside the settings preview).
+function Bar:ShouldShow(snap, s)
+  if self.kind == "rep" then
+    if not s.enabled then return false end
+    return not (snap.none and s.noFaction == "hide")
+  end
+  return not (snap.isMaxLevel and s.maxLevelBehavior == "hide")
+end
+
 function Bar:Update()
-  local s = ns.Settings()
+  local s = self.settings()
   local snap = self.source:Get()
   self.snap = snap
 
   if not self.preview then
-    local hidden = snap.isMaxLevel and s.maxLevelBehavior == "hide"
-    if hidden then self.frame:Hide() else self.frame:Show() end
-    ns.Compat.setNativeXPBarHidden(s.hideNativeBar and not hidden)
+    local shown = self:ShouldShow(snap, s)
+    if shown then self.frame:Show() else self.frame:Hide() end
+    if self.kind == "xp" then ns.Compat.setNativeXPBarHidden(s.hideNativeBar and shown) end
   end
 
-  self.target = Calc.barTargets(snap, s)
-  -- Snap back after a level-up instead of sliding backwards.
+  if self.kind == "rep" then
+    local fill = Calc.fraction(snap.current, snap.max)
+    if snap.isMax then fill = 1 end
+    self.target = { fill = fill, quest = fill, rested = fill }
+    -- Standing colour: the game's colour for the current standing, as a gradient.
+    if s.colorMode == "standing" and not snap.none then
+      local c = ns.Compat.standingColor(snap.standing)
+      setGradient(self.fill, { c[1] * 0.7, c[2] * 0.7, c[3] * 0.7 }, c)
+    end
+  else
+    self.target = Calc.barTargets(snap, s)
+  end
+  -- Snap back after a level-up (or a new standing) instead of sliding backwards.
   if self.target.fill < self.current.fill then self.current.fill = self.target.fill end
 
-  local L, opts = ns.L, ns.FormatOptions()
-  if snap.isMaxLevel then
+  local L, opts = ns.L, ns.FormatOptions(s)
+  if self.kind == "rep" and snap.none then
+    self.textLeft:SetText("")
+    self.textCenter:SetText(L["No watched faction"])
+    self.textRight:SetText("")
+  elseif self.kind == "xp" and snap.isMaxLevel then
     self.textLeft:SetText(Texts.render("level", snap, opts, L))
     self.textCenter:SetText(L["Max level"])
     self.textRight:SetText("")
@@ -334,6 +362,15 @@ function Bar:Update()
     self.textRight:SetText(Texts.render(s.textRight, snap, opts, L))
   end
   self:Layout()
+end
+
+-- Tooltip content for this bar (used by Tooltip.Show).
+function Bar:TooltipContent(detailed)
+  local s = self.settings()
+  if self.kind == "rep" then
+    return TooltipContent.buildRep(self.source:Get(), s, ns.FormatOptions(s), ns.L, detailed)
+  end
+  return TooltipContent.build(self.source:Get(), s, ns.CharData().history, ns.FormatOptions(s), ns.L, detailed)
 end
 
 function Bar:OnUpdate(elapsed)
@@ -354,7 +391,7 @@ function Bar:OnUpdate(elapsed)
 
   -- Mouseover visibility: fade toward the target opacity.
   self.state.tooltip = ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) or false
-  local target = Visibility.alpha(ns.Settings(), self.state)
+  local target = Visibility.alpha(self.settings(), self.state)
   if self.alpha ~= target then
     self.alpha = Visibility.step(self.alpha, target, elapsed)
     self.frame:SetAlpha(self.alpha)
@@ -364,6 +401,6 @@ function Bar:OnUpdate(elapsed)
   self.tooltipTimer = self.tooltipTimer + elapsed
   if self.tooltipTimer >= 1 then
     self.tooltipTimer = 0
-    if ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) then ns.Tooltip.Show(self.frame) end
+    if ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) then ns.Tooltip.Show(self.frame, self) end
   end
 end

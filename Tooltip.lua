@@ -15,6 +15,7 @@ local MUTED = { 0.62, 0.60, 0.68 }
 local SEPARATOR = { 1, 1, 1, 0.12 }
 
 local frame, owner, shiftShown
+local provider -- the bar whose content is shown (Bar:TooltipContent, .settings, .colors)
 local preview -- { anchor, detailed } while the settings panel shows the Tooltip tab
 local followCursor -- defined with the placement code below, used by the frame's OnUpdate
 local strings, textures = {}, {}
@@ -39,9 +40,9 @@ local function createFrame()
   -- Rebuild when Shift is pressed or released.
   frame:SetScript("OnUpdate", function()
     if not owner then return end
-    if Tooltip.shiftDown() ~= shiftShown then Tooltip.Show(owner) return end
+    if Tooltip.shiftDown() ~= shiftShown then Tooltip.Show(owner, provider) return end
     local previewing = preview and owner == preview.anchor
-    if not previewing and ns.Settings().tooltipAnchor == "cursor" then followCursor() end
+    if not previewing and provider.settings().tooltipAnchor == "cursor" then followCursor() end
   end)
 end
 
@@ -94,7 +95,7 @@ function followCursor()
 end
 
 local function place(anchor)
-  local s = ns.Settings()
+  local s = provider.settings()
   if s.tooltipAnchor == "cursor" then
     followCursor()
     return
@@ -113,17 +114,18 @@ local function place(anchor)
   end
 end
 
-function Tooltip.Show(anchor)
+-- `bar` is the bar whose data is shown (defaults to the XP bar).
+function Tooltip.Show(anchor, bar)
   if not frame then createFrame() end
   owner = anchor
   shiftShown = Tooltip.shiftDown()
   local previewing = preview and anchor == preview.anchor
   local detailed = shiftShown or (previewing and preview.detailed) or false
 
-  local s = ns.Settings()
-  local colors = (ns.bar and ns.bar.colors) or Palettes.colors(s.palette, {})
-  local content = TooltipContent.build(ns.source:Get(), s, ns.CharData().history,
-    ns.FormatOptions(), ns.L, detailed)
+  provider = bar or ns.bar
+  local s = provider.settings()
+  local colors = provider.colors or Palettes.colors(s.palette, {})
+  local content = provider:TooltipContent(detailed)
 
   local fontPath = Fonts.resolve(s.tooltipFont, Fonts.lsm())
   local size = s.tooltipFontSize
@@ -234,9 +236,9 @@ function Tooltip.fitScale(desired, width, height, availWidth, availHeight)
 end
 
 -- Keeps the tooltip visible next to `anchor` (the settings window) until HidePreview.
-function Tooltip.ShowPreview(anchor, detailed, inside)
-  preview = { anchor = anchor, detailed = detailed, inside = inside }
-  Tooltip.Show(anchor)
+function Tooltip.ShowPreview(anchor, detailed, inside, bar)
+  preview = { anchor = anchor, detailed = detailed, inside = inside, bar = bar }
+  Tooltip.Show(anchor, bar)
 end
 
 function Tooltip.HidePreview()
@@ -249,7 +251,7 @@ end
 function Tooltip.Hide()
   -- Leaving the bar while the preview is on goes back to the preview.
   if preview and owner ~= preview.anchor then
-    Tooltip.Show(preview.anchor)
+    Tooltip.Show(preview.anchor, preview.bar)
     return
   end
   owner = nil

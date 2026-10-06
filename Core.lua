@@ -32,9 +32,9 @@ function ns.Settings()
   return OdysseyDB.account
 end
 
-function ns.FormatOptions()
+function ns.FormatOptions(settings)
   return {
-    number = { abbreviated = ns.Settings().abbreviate, thousands = L["NUMBER_THOUSANDS"], decimal = L["NUMBER_DECIMAL"] },
+    number = { abbreviated = (settings or ns.Settings()).abbreviate, thousands = L["NUMBER_THOUSANDS"], decimal = L["NUMBER_DECIMAL"] },
     units = { d = L["UNIT_D"], h = L["UNIT_H"], m = L["UNIT_M"], s = L["UNIT_S"] },
   }
 end
