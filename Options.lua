@@ -54,73 +54,95 @@ local function c(section, card, key, kind, label, extra)
 end
 
 Options.CONTROLS = {
-  c("bar", "appearance", "preset", "menu", "Preset", { source = "presets", preset = true }),
-  c("bar", "appearance", "texture", "menu", "Texture", { source = "textures" }),
-  c("bar", "appearance", "corners", "menu", "Corners", { values = { "square", "rounded" }, display = named("corners.") }),
-  c("bar", "appearance", "border", "menu", "Border", { values = { "none", "thin", "thick" }, display = named("border.") }),
-  c("bar", "appearance", "ticks", "menu", "Ticks", { values = { 0, 10, 20 }, display = named("ticks.") }),
+  c("bar", "appearance", "linkStyle", "check", "Same style as the XP bar", { bars = { "rep" } }),
+  c("bar", "appearance", "preset", "menu", "Preset", { source = "presets", preset = true, look = true }),
+  c("bar", "appearance", "texture", "menu", "Texture", { source = "textures", look = true }),
+  c("bar", "appearance", "corners", "menu", "Corners", { values = { "square", "rounded" }, display = named("corners."), look = true }),
+  c("bar", "appearance", "border", "menu", "Border", { values = { "none", "thin", "thick" }, display = named("border."), look = true }),
+  c("bar", "appearance", "ticks", "menu", "Ticks", { values = { 0, 10, 20 }, display = named("ticks."), look = true }),
 
-  c("bar", "effects", "gloss", "check", "Gloss"),
-  c("bar", "effects", "shadow", "check", "Shadow"),
-  c("bar", "effects", "glow", "check", "Glow"),
-  c("bar", "effects", "spark", "check", "Spark"),
-  c("bar", "effects", "showQuestSegment", "check", "Show quest XP"),
-  c("bar", "effects", "showRestedSegment", "check", "Show rested XP"),
+  c("bar", "effects", "gloss", "check", "Gloss", { look = true }),
+  c("bar", "effects", "shadow", "check", "Shadow", { look = true }),
+  c("bar", "effects", "glow", "check", "Glow", { look = true }),
+  c("bar", "effects", "spark", "check", "Spark", { look = true }),
+  c("bar", "effects", "showQuestSegment", "check", "Show quest XP", { bars = { "xp" } }),
+  c("bar", "effects", "showRestedSegment", "check", "Show rested XP", { bars = { "xp" } }),
 
   c("bar", "size", "width", "slider", "Width", { min = 200, max = 1200, step = 10 }),
   c("bar", "size", "height", "slider", "Height", { min = 2, max = 40, step = 1 }),
   c("bar", "size", "scale", "slider", "Scale", { min = 0.5, max = 2, step = 0.05, display = percent }),
-  c("bar", "size", "bgOpacity", "slider", "Background opacity", { min = 0, max = 1, step = 0.05, display = percent }),
+  c("bar", "size", "bgOpacity", "slider", "Background opacity", { min = 0, max = 1, step = 0.05, display = percent, look = true }),
   c("bar", "size", "barAlpha", "slider", "Bar opacity", { min = 0.1, max = 1, step = 0.05, display = percent }),
 
+  c("bar", "visibility", "noFaction", "menu", "No watched faction", { bars = { "rep" },
+    values = { "hide", "text" }, display = named("noFaction.") }),
   c("bar", "visibility", "visibility", "menu", "Mode", { values = { "always", "mouseover" }, display = named("visibility.") }),
   c("bar", "visibility", "fadedAlpha", "slider", "Opacity when hidden", { min = 0, max = 1, step = 0.05, display = percent,
     enabledWhen = { key = "visibility", value = "mouseover" } }),
 
-  c("colors", "palette", "palette", "menu", "Palette", { source = "palettes" }),
-  c("colors", "palette", "borderColor", "menu", "Border color", { values = { "palette", "black", "gold" }, display = named("borderColor.") }),
-  c("colors", "custom", "colors.fill", "color", "color.fill", { part = "fill" }),
-  c("colors", "custom", "colors.rested", "color", "color.rested", { part = "rested" }),
-  c("colors", "custom", "colors.quest", "color", "color.quest", { part = "quest" }),
-  c("colors", "custom", "colors.bg", "color", "color.bg", { part = "bg" }),
-  c("colors", "custom", "colors.border", "color", "color.border", { part = "border" }),
-  c("colors", "custom", "colors.text", "color", "color.text", { part = "text" }),
-  c("colors", "custom", "action.resetColors", "action", "Reset to palette colors", { action = "resetColors" }),
+  c("colors", "palette", "palette", "menu", "Palette", { source = "palettes", look = true }),
+  c("colors", "palette", "colorMode", "menu", "Fill color", { bars = { "rep" },
+    values = { "standing", "palette" }, display = named("colorMode.") }),
+  c("colors", "palette", "borderColor", "menu", "Border color", { values = { "palette", "black", "gold" }, display = named("borderColor."), look = true }),
+  c("colors", "custom", "colors.fill", "color", "color.fill", { part = "fill", look = true }),
+  c("colors", "custom", "colors.rested", "color", "color.rested", { part = "rested", look = true }),
+  c("colors", "custom", "colors.quest", "color", "color.quest", { part = "quest", look = true }),
+  c("colors", "custom", "colors.bg", "color", "color.bg", { part = "bg", look = true }),
+  c("colors", "custom", "colors.border", "color", "color.border", { part = "border", look = true }),
+  c("colors", "custom", "colors.text", "color", "color.text", { part = "text", look = true }),
+  c("colors", "custom", "action.resetColors", "action", "Reset to palette colors", { action = "resetColors", look = true }),
 
-  c("texts", "content", "textLeft", "menu", "Left text", { values = Texts.KEYS, display = named("text.") }),
-  c("texts", "content", "textCenter", "menu", "Center text", { values = Texts.KEYS, display = named("text.") }),
-  c("texts", "content", "textRight", "menu", "Right text", { values = Texts.KEYS, display = named("text.") }),
+  c("texts", "content", "textLeft", "menu", "Left text", { valuesFor = { xp = Texts.KEYS, rep = Texts.REP_KEYS }, display = named("text.") }),
+  c("texts", "content", "textCenter", "menu", "Center text", { valuesFor = { xp = Texts.KEYS, rep = Texts.REP_KEYS }, display = named("text.") }),
+  c("texts", "content", "textRight", "menu", "Right text", { valuesFor = { xp = Texts.KEYS, rep = Texts.REP_KEYS }, display = named("text.") }),
   c("texts", "content", "textPosition", "menu", "Text position", { values = { "inside", "above", "below" }, display = named("textPosition.") }),
-  c("texts", "font", "barFont", "menu", "Font", { source = "fonts" }),
-  c("texts", "font", "barFontSize", "menu", "Size", { values = { 8, 9, 10, 11, 12, 13, 14, 16, 18 } }),
-  c("texts", "font", "barFontOutline", "menu", "Outline", { values = OUTLINES, display = named("outline.") }),
+  c("texts", "font", "barFont", "menu", "Font", { source = "fonts", look = true }),
+  c("texts", "font", "barFontSize", "menu", "Size", { values = { 8, 9, 10, 11, 12, 13, 14, 16, 18 }, look = true }),
+  c("texts", "font", "barFontOutline", "menu", "Outline", { values = OUTLINES, display = named("outline."), look = true }),
   c("texts", "font", "abbreviate", "check", "Abbreviate numbers"),
 
-  c("tooltip", "font", "tooltipFont", "menu", "Font", { source = "fonts" }),
-  c("tooltip", "font", "tooltipFontSize", "menu", "Size", { values = { 10, 11, 12, 13, 14, 16 } }),
-  c("tooltip", "font", "tooltipFontOutline", "menu", "Outline", { values = OUTLINES, display = named("outline.") }),
-  c("tooltip", "window", "tooltipBgOpacity", "slider", "Background opacity", { min = 0, max = 1, step = 0.05, display = percent }),
-  c("tooltip", "window", "tooltipScale", "slider", "Scale", { min = 0.5, max = 2, step = 0.05, display = percent }),
+  c("tooltip", "font", "tooltipFont", "menu", "Font", { source = "fonts", look = true }),
+  c("tooltip", "font", "tooltipFontSize", "menu", "Size", { values = { 10, 11, 12, 13, 14, 16 }, look = true }),
+  c("tooltip", "font", "tooltipFontOutline", "menu", "Outline", { values = OUTLINES, display = named("outline."), look = true }),
+  c("tooltip", "window", "tooltipBgOpacity", "slider", "Background opacity", { min = 0, max = 1, step = 0.05, display = percent, look = true }),
+  c("tooltip", "window", "tooltipScale", "slider", "Scale", { min = 0.5, max = 2, step = 0.05, display = percent, look = true }),
   c("tooltip", "window", "tooltipAnchor", "menu", "Position", { values = { "bar", "cursor" }, display = named("tooltipAnchor.") }),
-  c("tooltip", "blocks", "tooltip.level", "check", "opt.tooltip.level"),
-  c("tooltip", "blocks", "tooltip.rested", "check", "opt.tooltip.rested"),
-  c("tooltip", "blocks", "tooltip.quests", "check", "opt.tooltip.quests"),
-  c("tooltip", "blocks", "tooltip.kills", "check", "opt.tooltip.kills"),
-  c("tooltip", "blocks", "tooltip.session", "check", "opt.tooltip.session"),
-  c("tooltip", "blocks", "tooltip.played", "check", "opt.tooltip.played"),
-  c("tooltip", "blocks", "tooltip.history", "check", "opt.tooltip.history"),
+  c("tooltip", "blocks", "tooltip.progress", "check", "opt.tooltip.progress", { bars = { "rep" } }),
+  c("tooltip", "blocks", "tooltip.repSession", "check", "opt.tooltip.session", { bars = { "rep" }, settingKey = "tooltip.session" }),
+  c("tooltip", "blocks", "tooltip.level", "check", "opt.tooltip.level", { bars = { "xp" } }),
+  c("tooltip", "blocks", "tooltip.rested", "check", "opt.tooltip.rested", { bars = { "xp" } }),
+  c("tooltip", "blocks", "tooltip.quests", "check", "opt.tooltip.quests", { bars = { "xp" } }),
+  c("tooltip", "blocks", "tooltip.kills", "check", "opt.tooltip.kills", { bars = { "xp" } }),
+  c("tooltip", "blocks", "tooltip.session", "check", "opt.tooltip.session", { bars = { "xp" } }),
+  c("tooltip", "blocks", "tooltip.played", "check", "opt.tooltip.played", { bars = { "xp" } }),
+  c("tooltip", "blocks", "tooltip.history", "check", "opt.tooltip.history", { bars = { "xp" } }),
 
+  c("general", "behaviour", "enabled", "check", "Show the reputation bar", { bars = { "rep" } }),
   c("general", "behaviour", "locked", "check", "Lock bar"),
-  c("general", "behaviour", "hideNativeBar", "check", "Hide Blizzard XP bar"),
-  c("general", "behaviour", "maxLevelBehavior", "menu", "At max level", { values = { "hide", "show" }, display = named("max.") }),
+  c("general", "behaviour", "hideNativeBar", "check", "Hide Blizzard XP bar", { bars = { "xp" } }),
+  c("general", "behaviour", "maxLevelBehavior", "menu", "At max level", { values = { "hide", "show" }, display = named("max."), bars = { "xp" } }),
   c("general", "behaviour", "perCharacter", "check", "Settings per character", { account = true }),
   c("general", "data", "action.resetSession", "action", "Reset session", { action = "resetSession" }),
   c("general", "data", "action.clearHistory", "action", "Clear history", { action = "clearHistory" }),
   c("general", "about", "info.version", "info", "Version", { info = "version" }),
 }
 
+-- The controls that apply to one bar ("xp" or "rep").
+function Options.controlsFor(bar)
+  local list = {}
+  for _, control in ipairs(Options.CONTROLS) do
+    local applies = control.bars == nil
+    for _, b in ipairs(control.bars or {}) do if b == bar then applies = true end end
+    if applies then list[#list + 1] = control end
+  end
+  return list
+end
+
+-- The settings key a control reads and writes (usually its own key).
+local function settingKey(control) return control.settingKey or control.key end
+
 -- Items of a menu: { value, text } plus `font` or `texture` for a preview.
-function Options.choices(control)
+function Options.choices(control, bar)
   local items = {}
   if control.source == "presets" then
     for _, key in ipairs(Styles.PRESET_LIST) do items[#items + 1] = { value = key, text = L["style." .. key] } end
@@ -134,7 +156,8 @@ function Options.choices(control)
       items[#items + 1] = { value = t.value, text = text, texture = t.path }
     end
   else
-    for _, v in ipairs(control.values) do
+    local values = control.valuesFor and control.valuesFor[bar or "xp"] or control.values
+    for _, v in ipairs(values) do
       items[#items + 1] = { value = v, text = control.display and control.display(v) or tostring(v) }
     end
   end
@@ -149,24 +172,36 @@ function Options.sliderValue(control, raw)
   return math.min(control.max, v)
 end
 
-function Options.displayValue(control, value)
+function Options.displayValue(control, value, bar)
   if control.preset then return L["Choose…"] end
   if control.kind == "slider" then
     return control.display and control.display(value) or tostring(value)
   end
-  for _, item in ipairs(Options.choices(control)) do
+  for _, item in ipairs(Options.choices(control, bar)) do
     if item.value == value then return item.text end
   end
   return tostring(value)
 end
 
 function Options.currentValue(t, control)
-  return Defaults.get(t, control.key)
+  return Defaults.get(t, settingKey(control))
 end
 
-function Options.isEnabled(t, control)
+-- Greyed out: an `enabledWhen` rule not met, or a look setting of the reputation bar while
+-- it follows the XP bar's style.
+function Options.isEnabled(t, control, bar)
+  if bar == "rep" and control.look and t.linkStyle then return false end
   local rule = control.enabledWhen
   return rule == nil or Defaults.get(t, rule.key) == rule.value
+end
+
+-- Ticks a checkbox. Unticking "same style" copies the XP bar's look first.
+function Options.setCheck(t, control, value, xp)
+  if control.key == "linkStyle" and not value then
+    Defaults.unlinkRep(xp)
+  else
+    Defaults.set(t, settingKey(control), value)
+  end
 end
 
 -- Writes a picked value; a preset fills every bar field instead.
@@ -174,7 +209,7 @@ function Options.applyValue(t, control, value)
   if control.preset then
     Styles.applyPreset(t, value)
   else
-    Defaults.set(t, control.key, value)
+    Defaults.set(t, settingKey(control), value)
   end
 end
 
@@ -204,12 +239,12 @@ function Options.resetColors(settings)
 end
 
 Options.ACTIONS = {
-  resetColors = function() Options.resetColors(ns.Settings()) end,
-  resetSession = function()
-    ns.source:resetSession()
+  resetColors = function(bar) Options.resetColors(bar == "rep" and ns.Settings().rep or ns.Settings()) end,
+  resetSession = function(bar)
+    if bar == "rep" then ns.repSource:resetSession() else ns.source:resetSession() end
     print("|cff9966ffOdyssey|r: " .. L["Session reset."])
   end,
-  clearHistory = function()
+  clearHistory = function(_)
     History.reset(ns.CharData().history)
     print("|cff9966ffOdyssey|r: " .. L["History cleared."])
   end,
@@ -222,8 +257,16 @@ local function addonVersion()
   return version
 end
 
-local function target(control)
-  return control.account and OdysseyDB or ns.Settings()
+-- The settings a control edits: the account root, the XP settings, or the reputation view.
+local function target(control, bar)
+  if control.account then return OdysseyDB end
+  if bar == "rep" then return Defaults.repView(ns.Settings()) end
+  return ns.Settings()
+end
+
+-- The live bar object of a kind (its colours feed the swatches and the tooltip preview).
+local function barObject(bar)
+  return bar == "rep" and ns.repBar or ns.bar
 end
 
 -- ======================================================================= style
@@ -362,11 +405,11 @@ local function createMenu()
   end)
 end
 
-local function openMenu(button, control, current, onPick)
+local function openMenu(button, control, current, onPick, bar)
   if not menu then createMenu() end
   if menu:IsShown() and menu.owner == button then menu:Hide() return end
   menu.owner = button
-  menu.items = Options.choices(control)
+  menu.items = Options.choices(control, bar)
   menu.offset = 0
   for i, item in ipairs(menu.items) do
     if item.value == current then menu.offset = math.max(0, math.min(#menu.items - MENU_ROWS, i - 3)) end
@@ -555,7 +598,7 @@ local function changed(control)
 end
 
 -- One row of a card: label on the left, widget on the right.
-local function buildRow(card, control, y)
+local function buildRow(card, control, y, bar)
   local label = fontString(card, 12, C.text)
   label:SetPoint("TOPLEFT", 12, y - 4)
   local widgetSpace = (control.kind == "check" and 30) or (control.kind == "color" and 80)
@@ -569,9 +612,10 @@ local function buildRow(card, control, y)
   if control.kind == "check" then
     widget = makeCheck(card)
     widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 2)
-    widget:SetScript("OnClick", function()
-      local t = target(control)
-      Defaults.set(t, control.key, not Defaults.get(t, control.key))
+    widget:SetScript("OnClick", function(self)
+      if self.enabled == false then return end
+      local t = target(control, bar)
+      Options.setCheck(t, control, not Options.currentValue(t, control), ns.Settings())
       changed(control)
     end)
   elseif control.kind == "menu" then
@@ -579,14 +623,15 @@ local function buildRow(card, control, y)
     menuButtons[#menuButtons + 1] = widget
     widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 1)
     widget:SetScript("OnClick", function(self)
-      openMenu(self, control, Options.currentValue(target(control), control), function(value)
-        Options.applyValue(target(control), control, value)
+      if self.enabled == false then return end
+      openMenu(self, control, Options.currentValue(target(control, bar), control), function(value)
+        Options.applyValue(target(control, bar), control, value)
         changed(control)
-      end)
+      end, bar)
     end)
   elseif control.kind == "slider" then
     widget = makeSlider(card, control, function(raw)
-      local t = target(control)
+      local t = target(control, bar)
       local value = Options.sliderValue(control, raw)
       if value ~= Defaults.get(t, control.key) then
         Options.applyValue(t, control, value)
@@ -597,22 +642,25 @@ local function buildRow(card, control, y)
   elseif control.kind == "color" then
     widget = makeSwatch(card)
     widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right - 26, y - 2)
-    widget:SetScript("OnClick", function()
-      local s = ns.Settings()
-      local _, colors = accentColor()
+    widget:SetScript("OnClick", function(self)
+      if self.enabled == false then return end
+      local s = bar == "rep" and ns.Settings().rep or ns.Settings()
+      local colors = barObject(bar).colors
       local start = control.part == "fill" and colors.fill.to or colors[control.part]
       openColorPicker(start, Options.colorSession(s, control.part, start), function() changed(control) end)
     end)
     widget.reset:SetScript("OnClick", function()
-      Defaults.set(ns.Settings(), control.key, nil)
+      if widget.enabled == false then return end
+      Defaults.set(bar == "rep" and ns.Settings().rep or ns.Settings(), control.key, nil)
       changed(control)
     end)
   elseif control.kind == "action" then
     label:Hide()
     widget = flatButton(card, CARD_W - 24, 22, L[control.label])
     widget:SetPoint("TOPLEFT", 12, y - 1)
-    widget:SetScript("OnClick", function()
-      Options.ACTIONS[control.action]()
+    widget:SetScript("OnClick", function(self)
+      if self.enabled == false then return end
+      Options.ACTIONS[control.action](bar)
       changed(control)
     end)
   elseif control.kind == "info" then
@@ -620,12 +668,12 @@ local function buildRow(card, control, y)
     widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 4)
     widget:SetText(addonVersion())
   end
-  widgets[#widgets + 1] = { control = control, widget = widget, label = label }
+  widgets[#widgets + 1] = { control = control, widget = widget, label = label, bar = bar }
 end
 
-local function buildCard(parent, section, card)
+local function buildCard(parent, section, card, bar)
   local rows = {}
-  for _, control in ipairs(Options.CONTROLS) do
+  for _, control in ipairs(Options.controlsFor(bar)) do
     if control.section == section.key and control.card == card.key then rows[#rows + 1] = control end
   end
   local frame = CreateFrame("Frame", nil, parent)
@@ -638,12 +686,12 @@ local function buildCard(parent, section, card)
   local title = fontString(frame, 11, { 0.79, 0.64, 1 })
   title:SetPoint("TOPLEFT", 12, -9)
   title:SetText(string.upper(L[card.label]))
-  for i, control in ipairs(rows) do buildRow(frame, control, -CARD_HEADER - (i - 1) * ROW_H) end
+  for i, control in ipairs(rows) do buildRow(frame, control, -CARD_HEADER - (i - 1) * ROW_H, bar) end
   return frame
 end
 
 -- Lays the section's cards in two columns, each card going to the shorter column.
-local function buildPage(scrollChild, section)
+local function buildPage(scrollChild, section, bar)
   local page = CreateFrame("Frame", nil, scrollChild)
   page:SetPoint("TOPLEFT")
   page:SetWidth(CONTENT_W)
@@ -673,7 +721,7 @@ local function buildPage(scrollChild, section)
   local columns = { top, top }
   local tooltipLayout = section.preview == "tooltip"
   for _, cardDef in ipairs(section.cards) do
-    local card = buildCard(page, section, cardDef)
+    local card = buildCard(page, section, cardDef, bar)
     -- The tooltip preview owns the whole right column (the detailed view is tall).
     local col = (tooltipLayout or columns[1] <= columns[2]) and 1 or 2
     card:SetPoint("TOPLEFT", (col - 1) * (CARD_W + CARD_GAP), -columns[col])
@@ -749,12 +797,24 @@ local function createWindow()
     self:SetVerticalScroll(math.max(0, math.min(max, self:GetVerticalScroll() - delta * 40)))
   end)
 
-  window.pages, window.tabs = {}, {}
+  -- Bar selector: which bar the sections edit.
+  window.barButtons = {}
+  for i, bar in ipairs({ "xp", "rep" }) do
+    local b = flatButton(sidebar, SIDEBAR_W - 16, 22, L[bar == "xp" and "XP bar" or "Reputation bar"])
+    b:SetPoint("TOPLEFT", 8, -10 - (i - 1) * 26)
+    b:SetScript("OnClick", function() Options.SelectBar(bar) end)
+    window.barButtons[bar] = b
+  end
+  local SECTIONS_TOP = -10 - 2 * 26 - 10
+
+  window.pages, window.tabs = { xp = {}, rep = {} }, {}
   for i, section in ipairs(Options.SECTIONS) do
-    window.pages[section.key] = buildPage(child, section)
+    for _, bar in ipairs({ "xp", "rep" }) do
+      window.pages[bar][section.key] = buildPage(child, section, bar)
+    end
     local tab = CreateFrame("Button", nil, sidebar)
     tab:SetSize(SIDEBAR_W, 32)
-    tab:SetPoint("TOPLEFT", 0, -8 - (i - 1) * 34)
+    tab:SetPoint("TOPLEFT", 0, SECTIONS_TOP - (i - 1) * 34)
     tab.bg = solid(tab, "BACKGROUND", { 0.13, 0.11, 0.2, 1 })
     tab.bg:SetAllPoints()
     tab.strip = tab:CreateTexture(nil, "ARTWORK")
@@ -771,19 +831,24 @@ local function createWindow()
     window.tabs[section.key] = tab
   end
 
-  -- "Detailed preview" toggle under the tooltip preview (not saved).
-  local tooltipPage = window.pages.tooltip
-  local detail = makeCheck(tooltipPage.previewCard)
-  detail:SetPoint("TOPRIGHT", -10, -6)
-  detail.mark:Hide()
-  local detailLabel = fontString(tooltipPage.previewCard, 11, C.muted)
-  detailLabel:SetPoint("RIGHT", detail, "LEFT", -6, 0)
-  detailLabel:SetText(L["Detailed preview"])
-  detail:SetScript("OnClick", function()
-    window.previewDetailed = not window.previewDetailed
-    detail.mark:SetShown(window.previewDetailed)
-    Options.UpdatePreview()
-  end)
+  -- "Detailed preview" toggle in each tooltip preview card (not saved).
+  window.detailChecks = {}
+  for _, bar in ipairs({ "xp", "rep" }) do
+    local card = window.pages[bar].tooltip.previewCard
+    local detail = makeCheck(card)
+    detail:SetPoint("TOPRIGHT", -10, -6)
+    detail.mark:Hide()
+    local detailLabel = fontString(card, 11, C.muted)
+    detailLabel:SetPoint("RIGHT", detail, "LEFT", -6, 0)
+    detailLabel:SetText(L["Detailed preview"])
+    detail:SetScript("OnClick", function()
+      window.previewDetailed = not window.previewDetailed
+      for _, check in ipairs(window.detailChecks) do check.mark:SetShown(window.previewDetailed) end
+      Options.UpdatePreview()
+    end)
+    window.detailChecks[#window.detailChecks + 1] = detail
+  end
+  window.bar = "xp"
 
   window.scroll, window.child = scroll, child
   window:SetScript("OnHide", function()
@@ -809,22 +874,30 @@ function refresh()
     tab.bg:SetShown(selected)
     tab.strip:SetColorTexture(accent[1], accent[2], accent[3], selected and 1 or 0)
   end
+  for bar, button in pairs(window.barButtons) do
+    local selected = bar == window.bar
+    button.label:SetTextColor(selected and 1 or C.muted[1], selected and 1 or C.muted[2], selected and 1 or C.muted[3], 1)
+    if button.marker then button.marker:SetShown(selected) end
+    button:SetAlpha(selected and 1 or 0.7)
+  end
   for _, w in ipairs(widgets) do
     local c = w.control
-    local t = target(c)
+    local t = target(c, w.bar)
     local value = Options.currentValue(t, c)
-    if c.enabledWhen then
-      local enabled = Options.isEnabled(t, c)
+    if w.widget then
+      local enabled = Options.isEnabled(t, c, w.bar)
       w.widget.enabled = enabled
       w.widget:SetAlpha(enabled and 1 or 0.35)
       w.label:SetAlpha(enabled and 1 or 0.35)
+      if w.widget.reset then w.widget.reset.enabled = enabled end
     end
+    if c.kind == "color" then colors = barObject(w.bar).colors or colors end
     if c.kind == "slider" then
       w.widget:SetValue(value)
     elseif c.kind == "check" then
       w.widget.mark:SetShown(value and true or false)
     elseif c.kind == "menu" then
-      w.widget:SetText(Options.displayValue(c, value))
+      w.widget:SetText(Options.displayValue(c, value, w.bar))
     elseif c.kind == "color" then
       local color = c.part == "fill" and colors.fill.to or colors[c.part]
       w.widget.color:SetColorTexture(color[1], color[2], color[3], 1)
@@ -837,25 +910,31 @@ end
 function Options.UpdatePreview()
   if not window or not window:IsShown() then return end
   local section
-  for _, s in ipairs(Options.SECTIONS) do if s.key == window.current then section = s end end
-  local page = window.pages[window.current]
+  for _, sec in ipairs(Options.SECTIONS) do if sec.key == window.current then section = sec end end
+  local page = window.pages[window.bar][window.current]
+  ns.previewBars = ns.previewBars or {}
+  for bar, preview in pairs(ns.previewBars) do
+    if bar ~= window.bar or not (section and section.preview == "bar") then preview.frame:Hide() end
+  end
   if section and section.preview == "bar" then
-    if not ns.previewBar then
-      ns.previewBar = ns.Bar.create(ns.source, { parent = page.previewCard, width = CONTENT_W - 40 })
+    local bar = window.bar
+    if not ns.previewBars[bar] then
+      ns.previewBars[bar] = ns.Bar.create(bar == "rep" and ns.repSource or ns.source, {
+        parent = page.previewCard, width = CONTENT_W - 40, kind = bar,
+        settings = bar == "rep" and ns.RepSettings or ns.Settings,
+      })
     end
-    local bar = ns.previewBar.frame
-    bar:SetParent(page.previewCard)
-    bar:ClearAllPoints()
-    bar:SetPoint("LEFT", page.previewCard, "LEFT", 20, -6)
-    bar:Show()
-    ns.previewBar:ApplySettings()
-    ns.previewBar:Update()
-  elseif ns.previewBar then
-    ns.previewBar.frame:Hide()
+    local preview = ns.previewBars[bar]
+    preview.frame:SetParent(page.previewCard)
+    preview.frame:ClearAllPoints()
+    preview.frame:SetPoint("LEFT", page.previewCard, "LEFT", 20, -6)
+    preview.frame:Show()
+    preview:ApplySettings()
+    preview:Update()
   end
   if ns.Tooltip then
     if section and section.preview == "tooltip" then
-      ns.Tooltip.ShowPreview(page.previewCard, window.previewDetailed, true)
+      ns.Tooltip.ShowPreview(page.previewCard, window.previewDetailed, true, barObject(window.bar))
     else
       ns.Tooltip.HidePreview()
     end
@@ -865,11 +944,18 @@ end
 function Options.Select(key)
   if menu then menu:Hide() end
   window.current = key
-  for k, page in pairs(window.pages) do page:SetShown(k == key) end
-  window.child:SetHeight(window.pages[key]:GetHeight())
+  for bar, pages in pairs(window.pages) do
+    for k, page in pairs(pages) do page:SetShown(bar == window.bar and k == key) end
+  end
+  window.child:SetHeight(window.pages[window.bar][key]:GetHeight())
   window.scroll:SetVerticalScroll(0)
   refresh()
   Options.UpdatePreview()
+end
+
+function Options.SelectBar(bar)
+  window.bar = bar
+  Options.Select(window.current or "bar")
 end
 
 -- Keeps widgets and previews in sync after any change (Core's ns.Refresh calls it, so

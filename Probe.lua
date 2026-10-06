@@ -15,6 +15,7 @@ local PROBES = {
   "STANDARD_TEXT_FONT", "CreateColor", "LibStub", "IsShiftKeyDown", "UISpecialFrames",
   "UIParent.CreateMaskTexture", "ColorPickerFrame", "ColorPickerFrame.SetupColorPickerAndShow",
   "GetCursorPosition", "ShowUIPanel",
+  "GetWatchedFactionInfo", "C_Reputation.GetWatchedFactionData", "FACTION_BAR_COLORS", "FACTION_STANDING_LABEL5",
 }
 
 local function resolve(path)

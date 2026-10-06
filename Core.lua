@@ -32,6 +32,11 @@ function ns.Settings()
   return OdysseyDB.account
 end
 
+-- The reputation bar's settings, seen through the "same style as the XP bar" link.
+function ns.RepSettings()
+  return Defaults.repView(ns.Settings())
+end
+
 function ns.FormatOptions(settings)
   return {
     number = { abbreviated = (settings or ns.Settings()).abbreviate, thousands = L["NUMBER_THOUSANDS"], decimal = L["NUMBER_DECIMAL"] },
@@ -41,8 +46,10 @@ end
 
 -- Re-applies settings after any change made by the options panel or a slash command.
 function ns.Refresh()
-  if ns.bar then ns.bar:ApplySettings(); ns.bar:Update() end
-  if ns.previewBar then ns.previewBar:ApplySettings(); ns.previewBar:Update() end
+  for _, bar in ipairs({ ns.bar, ns.repBar }) do bar:ApplySettings(); bar:Update() end
+  for _, preview in pairs(ns.previewBars or {}) do
+    if preview.frame:IsShown() then preview:ApplySettings(); preview:Update() end
+  end
   if ns.Options and ns.Options.Refresh then ns.Options.Refresh() end
 end
 
@@ -104,9 +111,11 @@ function handlers.PLAYER_LEVEL_UP(newLevel)
   requestPlayed()
 end
 function handlers.QUEST_LOG_UPDATE() scheduleQuestRefresh() end
+function handlers.UPDATE_FACTION() ns.repSource:onUpdate() end
 
 function handlers.PLAYER_ENTERING_WORLD()
   ns.source:rebase()
+  ns.repSource:rebase()
   requestPlayed()
   scheduleQuestRefresh()
 end
@@ -134,7 +143,11 @@ frame:SetScript("OnEvent", function(_, event, ...)
     ns.CharData()
     ns.Fonts.registerBundled(ns.Fonts.lsm())
     ns.source = ns.XPSource.new(Compat.xpApi())
-    if ns.Bar then ns.bar = ns.Bar.create(ns.source) end
+    ns.repSource = ns.RepSource.new(Compat.repApi())
+    if ns.Bar then
+      ns.bar = ns.Bar.create(ns.source)
+      ns.repBar = ns.Bar.create(ns.repSource, { kind = "rep", name = "OdysseyRepBar", settings = ns.RepSettings })
+    end
     if ns.Options then ns.Options.create() end
     for name in pairs(handlers) do frame:RegisterEvent(name) end
   else
@@ -177,10 +190,12 @@ SlashCmdList["ODYSSEY"] = function(msg)
     dump()
   elseif cmd == "lock" or cmd == "unlock" then
     ns.Settings().locked = (cmd == "lock")
+    ns.Settings().rep.locked = (cmd == "lock")
     say(ns.Settings().locked and L["Bar locked."] or L["Bar unlocked. Drag it with the mouse."])
     ns.Refresh()
   elseif cmd == "reset" then
     ns.source:resetSession()
+    ns.repSource:resetSession()
     say(L["Session reset."])
   elseif cmd == "" or cmd == "options" then
     if ns.OpenOptions then ns.OpenOptions() else say(L["Commands: /odyssey [lock|unlock|reset|dump|probe]"]) end

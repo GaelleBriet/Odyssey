@@ -44,7 +44,7 @@ test("every control sits in an existing card of an existing section", function()
     for _, card in ipairs(s.cards) do if card.key == c.card then found = true end end
     truthy(found, c.key .. " card")
     eq(type(c.label), "string")
-    if c.kind == "menu" then truthy(c.values or c.source, c.key .. " choices") end
+    if c.kind == "menu" then truthy(c.values or c.valuesFor or c.source, c.key .. " choices") end
   end
 end)
 
@@ -208,4 +208,65 @@ test("colour session works when the settings have no colours table yet", functio
   local session = Options.colorSession(s, "text", { 1, 1, 1 })
   session.change(0, 0, 0)
   eq(s.colors.text, { 0, 0, 0 })
+end)
+
+-- ------------------------------------------------------------ reputation
+
+local function keysFor(bar)
+  local keys = {}
+  for _, c in ipairs(Options.controlsFor(bar)) do keys[c.key] = true end
+  return keys
+end
+
+test("XP-only and reputation-only controls", function()
+  local xp, rep = keysFor("xp"), keysFor("rep")
+  for _, key in ipairs({ "showQuestSegment", "showRestedSegment", "hideNativeBar", "maxLevelBehavior", "tooltip.level", "tooltip.history" }) do
+    truthy(xp[key], "xp " .. key)
+    truthy(not rep[key], "rep " .. key)
+  end
+  for _, key in ipairs({ "enabled", "linkStyle", "colorMode", "noFaction", "tooltip.progress", "tooltip.repSession" }) do
+    truthy(rep[key], "rep " .. key)
+    truthy(not xp[key], "xp " .. key)
+  end
+  for _, key in ipairs({ "texture", "palette", "width", "visibility", "textLeft", "barFont", "locked" }) do
+    truthy(xp[key] and rep[key], "both " .. key)
+  end
+end)
+
+test("every card has controls for each bar", function()
+  for _, bar in ipairs({ "xp", "rep" }) do
+    local count = {}
+    for _, c in ipairs(Options.controlsFor(bar)) do count[c.section .. "/" .. c.card] = true end
+    for _, s in ipairs(Options.SECTIONS) do
+      for _, card in ipairs(s.cards) do truthy(count[s.key .. "/" .. card.key], bar .. " " .. s.key .. "/" .. card.key) end
+    end
+  end
+end)
+
+test("text menus offer the keys of the bar being edited", function()
+  local c = control("textLeft")
+  eq(Options.choices(c, "xp")[2].value, "level")
+  eq(Options.choices(c, "rep")[2].value, "faction")
+  eq(#Options.choices(c, "rep"), 9)
+end)
+
+test("the reputation look is greyed while it follows the XP bar", function()
+  eq(Options.isEnabled({ linkStyle = true }, control("texture"), "rep"), false)
+  eq(Options.isEnabled({ linkStyle = false }, control("texture"), "rep"), true)
+  eq(Options.isEnabled({ linkStyle = true }, control("texture"), "xp"), true)
+  eq(Options.isEnabled({ linkStyle = true }, control("width"), "rep"), true)
+  eq(Options.isEnabled({ linkStyle = true }, control("linkStyle"), "rep"), true)
+end)
+
+test("unticking 'same style' copies the XP look first", function()
+  local xp = Defaults.copy(Defaults.settings)
+  xp.texture = "flat"
+  local view = Defaults.repView(xp)
+  Options.setCheck(view, control("linkStyle"), false, xp)
+  eq(xp.rep.linkStyle, false)
+  eq(xp.rep.texture, "flat")
+  Options.setCheck(view, control("linkStyle"), true, xp)
+  eq(xp.rep.linkStyle, true)
+  Options.setCheck(view, control("enabled"), false, xp)
+  eq(xp.rep.enabled, false)
 end)

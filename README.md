@@ -8,6 +8,9 @@
 - **Eleven palettes** (arcane, royal gold, emerald, frost, ember, twilight rose, starry night, fel, monochrome,
   class colour, faction), and you can pick any element's colour yourself with the colour wheel.
 - **Show on mouseover**, with an adjustable opacity while hidden.
+- A **reputation bar** for the faction you watch in the game: standing, progress, remaining, to Exalted,
+  reputation per hour; coloured by standing or by your palette; its own position and settings, or
+  "same style as the XP bar".
 - Rested XP and "quests ready to turn in" drawn right on the bar.
 - Three text slots you choose freely: percentage, current / max, remaining, rested, XP per hour, time to level, kills to level, quest XP, level.
 - **Fonts of your choice** for the bar and the tooltip: the game's fonts, four bundled open fonts
@@ -18,15 +21,14 @@
 
 ## Usage
 
-- `/odyssey` or right-click the bar: settings (tabs Bar, Colours, Texts, Tooltip).
+- `/odyssey` or right-click a bar: Odyssey's settings window (XP bar / reputation bar, sections Bar, Colours, Texts, Tooltip, General).
 - `/odyssey unlock` then drag the bar; `/odyssey lock` to fix it.
 - `/odyssey reset`: restart the session figures.
 
-## Known limitation
+## Note
 
-On this client the default XP and reputation bars share one container, so hiding the default XP bar
-also hides the reputation bar. Turn off "Hide Blizzard XP bar" to get it back. An Odyssey reputation
-bar is planned.
+On this client the default XP and reputation bars share one container, so "Hide Blizzard XP bar" hides
+both; Odyssey's reputation bar replaces the default one.
 
 ## Install
 
