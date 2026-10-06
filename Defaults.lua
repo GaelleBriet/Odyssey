@@ -65,6 +65,12 @@ Defaults.settings = {
   ticks = 0, -- 0, 10 (every 10 %) or 20 (every 5 %)
   textPosition = "inside", -- "inside", "above" or "below"
   visibility = "always", -- "always" or "mouseover"
+  combatMode = "show", -- in combat: "show", "fade" or "hide"
+  instanceMode = "show", -- in a dungeon or raid: "show", "fade" or "hide"
+  hideWhenDead = false,
+  strata = "MEDIUM", -- frame strata: "BACKGROUND", "LOW", "MEDIUM", "HIGH"
+  clickThrough = false, -- the mouse goes through the bar (no tooltip, no clicks)
+  alerts = { questsReady = true, levelUpSummary = true, restReminder = true },
   fadedAlpha = 0, -- bar opacity while not hovered, in "mouseover" mode
   palette = "arcane",
   colors = {}, -- per-element overrides: fill, rested, quest, bg, border, text = {r, g, b}
@@ -155,6 +161,7 @@ Defaults.root = {
   profileKeys = {}, -- [character] = profile name
   window = { "CENTER", "CENTER", 0, 0 }, -- settings window position (point, relative point, x, y)
   chars = {}, -- per character data: leveling history
+  alts = {}, -- characters recorded at logout (Characters.lua)
 }
 
 -- ------------------------------------------------------------- migrations
