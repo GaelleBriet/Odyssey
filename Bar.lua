@@ -1,5 +1,6 @@
 local ADDON, ns = ...
-local Calc, Texts, Styles, Palettes, Fonts = ns.Calc, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts
+local Calc, Texts, Styles, Palettes, Fonts, Visibility =
+  ns.Calc, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts, ns.Visibility
 
 local Bar = {}
 Bar.__index = Bar
@@ -7,7 +8,7 @@ ns.Bar = Bar
 
 local EASE_SPEED = 8
 local LAYERS = { "fill", "quest", "rested" }
-local TICKS = 9
+local TICKS = 19 -- enough lines for a tick every 5 %
 local GLOW_OUTSET = 6
 
 local function setWidth(tex, w)
@@ -101,17 +102,26 @@ function Bar.create(source)
   self.target = { fill = 0, quest = 0, rested = 0 }
   self.tooltipTimer = 0
 
+  self.state = { hover = false, moving = false, tooltip = false }
+  self.alpha = 1
+
   f:SetScript("OnDragStart", function()
-    if not ns.Settings().locked then f:StartMoving() end
+    if not ns.Settings().locked then
+      self.state.moving = true
+      f:StartMoving()
+    end
   end)
   f:SetScript("OnDragStop", function()
     f:StopMovingOrSizing()
+    self.state.moving = false
     if not ns.Settings().locked then self:SavePosition() end
   end)
   f:SetScript("OnEnter", function()
+    self.state.hover = true
     if ns.Tooltip then ns.Tooltip.Show(f) end
   end)
   f:SetScript("OnLeave", function()
+    self.state.hover = false
     if ns.Tooltip then ns.Tooltip.Hide() end
   end)
   f:SetScript("OnMouseUp", function(_, button)
@@ -149,17 +159,16 @@ function Bar:ApplySettings()
   f:ClearAllPoints()
   f:SetPoint(p[1], _G[p[2]] or UIParent, p[3], p[4], p[5])
 
-  local style = Styles.defs[s.style] or Styles.defs.smooth
-  self.style = style
-  local b = style.border
+  self.look = { glow = s.glow, spark = s.spark }
+  local b = Styles.BORDER_SIZE[s.border] or 1
   self.innerWidth = s.width - 2 * b
 
   local _, class = UnitClass("player")
   local rc = RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-  local colors = Palettes.colors(s.palette, {
+  local colors = Palettes.effective(s.palette, {
     classColor = rc and { rc.r, rc.g, rc.b } or nil,
     faction = UnitFactionGroup("player"),
-  })
+  }, s)
   self.colors = colors
 
   self.borderTex:ClearAllPoints()
@@ -167,21 +176,21 @@ function Bar:ApplySettings()
   self.borderTex:SetColorTexture(colors.border[1], colors.border[2], colors.border[3], 1)
   if b > 0 then self.borderTex:Show() else self.borderTex:Hide() end
 
-  local inner = { self.bg, self.rested, self.quest, self.fill }
-  for _, tex in ipairs(inner) do
+  for _, tex in ipairs({ self.bg, self.rested, self.quest, self.fill }) do
     tex:ClearAllPoints()
     tex:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
     tex:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", b, b)
   end
   self.bg:SetWidth(self.innerWidth)
-  self.bg:SetColorTexture(colors.bg[1], colors.bg[2], colors.bg[3], 0.92)
+  self.bg:SetColorTexture(colors.bg[1], colors.bg[2], colors.bg[3], s.bgOpacity)
   if self.innerMask then
     self.innerMask:ClearAllPoints()
     self.innerMask:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
     self.innerMask:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -b, b)
   end
 
-  for _, tex in ipairs({ self.rested, self.quest, self.fill }) do tex:SetTexture(style.texture) end
+  local texture = Styles.resolveTexture(s.texture, Fonts.lsm())
+  for _, tex in ipairs({ self.rested, self.quest, self.fill }) do tex:SetTexture(texture) end
   setGradient(self.fill, colors.fill.from, colors.fill.to)
   self.rested:SetVertexColor(colors.rested[1], colors.rested[2], colors.rested[3], 0.6)
   self.quest:SetVertexColor(colors.quest[1], colors.quest[2], colors.quest[3], 0.65)
@@ -189,36 +198,48 @@ function Bar:ApplySettings()
   self.gloss:ClearAllPoints()
   self.gloss:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
   self.gloss:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -b, b)
-  if style.gloss then self.gloss:Show() else self.gloss:Hide() end
-  if style.shadow then self.shadow:Show() else self.shadow:Hide() end
+  if s.gloss then self.gloss:Show() else self.gloss:Hide() end
+  if s.shadow then self.shadow:Show() else self.shadow:Hide() end
 
   local a = colors.accent
   self.glow:SetVertexColor(a[1], a[2], a[3], 0.85)
   self.spark:SetSize(14, s.height * 2)
 
+  -- s.ticks = number of segments (10 or 20): one line between each pair of segments.
+  local segments = s.ticks or 0
   for i, tick in ipairs(self.ticks) do
     tick:ClearAllPoints()
-    tick:SetColorTexture(0, 0, 0, 0.75)
-    tick:SetWidth(1)
-    tick:SetPoint("TOP", f, "TOPLEFT", b + self.innerWidth * i / (TICKS + 1), -b)
-    tick:SetPoint("BOTTOM", f, "BOTTOMLEFT", b + self.innerWidth * i / (TICKS + 1), b)
-    if style.ticks then tick:Show() else tick:Hide() end
+    if segments > 1 and i < segments then
+      local x = b + self.innerWidth * i / segments
+      tick:SetColorTexture(0, 0, 0, 0.75)
+      tick:SetWidth(1)
+      tick:SetPoint("TOP", f, "TOPLEFT", x, -b)
+      tick:SetPoint("BOTTOM", f, "BOTTOMLEFT", x, b)
+      tick:Show()
+    else
+      tick:Hide()
+    end
   end
 
-  self:SetMasked(style.rounded)
+  self:SetMasked(s.corners == "rounded")
 
-  local texts = { self.textLeft, self.textCenter, self.textRight }
-  for _, fs in ipairs(texts) do
+  for _, fs in ipairs({ self.textLeft, self.textCenter, self.textRight }) do
     fs:ClearAllPoints()
     setFont(fs, s, "bar")
     fs:SetTextColor(colors.text[1], colors.text[2], colors.text[3], 1)
   end
-  if style.textPosition == "above" then
+  local textRoom = s.barFontSize + 6
+  if s.textPosition == "above" then
     self.textLeft:SetPoint("BOTTOMLEFT", f, "TOPLEFT", 0, 3)
     self.textCenter:SetPoint("BOTTOM", f, "TOP", 0, 3)
     self.textRight:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", 0, 3)
     -- Let the mouse reach the bar through its text too.
-    f:SetHitRectInsets(0, 0, -(s.barFontSize + 6), 0)
+    f:SetHitRectInsets(0, 0, -textRoom, 0)
+  elseif s.textPosition == "below" then
+    self.textLeft:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 0, -3)
+    self.textCenter:SetPoint("TOP", f, "BOTTOM", 0, -3)
+    self.textRight:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", 0, -3)
+    f:SetHitRectInsets(0, 0, 0, -textRoom)
   else
     self.textLeft:SetPoint("LEFT", f, "LEFT", 6, 0)
     self.textCenter:SetPoint("CENTER", f, "CENTER", 0, 0)
@@ -236,7 +257,7 @@ function Bar:Layout()
   setWidth(self.fill, self.current.fill * inner)
 
   local fillShown = self.current.fill * inner >= 0.5
-  if self.style.glow and fillShown then
+  if self.look.glow and fillShown then
     self.glow:ClearAllPoints()
     self.glow:SetPoint("TOPLEFT", self.fill, "TOPLEFT", -GLOW_OUTSET, GLOW_OUTSET)
     self.glow:SetPoint("BOTTOMRIGHT", self.fill, "BOTTOMRIGHT", GLOW_OUTSET, -GLOW_OUTSET)
@@ -245,7 +266,7 @@ function Bar:Layout()
     self.glow:Hide()
   end
 
-  if self.style.spark and fillShown and self.current.fill < 0.998 then
+  if self.look.spark and fillShown and self.current.fill < 0.998 then
     self.spark:ClearAllPoints()
     self.spark:SetPoint("CENTER", self.fill, "RIGHT", 0, 0)
     self.spark:Show()
@@ -296,6 +317,14 @@ function Bar:OnUpdate(elapsed)
     end
   end
   if moved then self:Layout() end
+
+  -- Mouseover visibility: fade toward the target opacity.
+  self.state.tooltip = ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) or false
+  local target = Visibility.alpha(ns.Settings(), self.state)
+  if self.alpha ~= target then
+    self.alpha = Visibility.step(self.alpha, target, elapsed)
+    self.frame:SetAlpha(self.alpha)
+  end
 
   -- Keep the tooltip live while the mouse rests on the bar.
   self.tooltipTimer = self.tooltipTimer + elapsed
