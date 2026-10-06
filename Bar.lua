@@ -1,5 +1,5 @@
 local ADDON, ns = ...
-local Calc, Texts, Styles, Themes = ns.Calc, ns.Texts, ns.Styles, ns.Themes
+local Calc, Texts, Styles, Palettes, Fonts = ns.Calc, ns.Texts, ns.Styles, ns.Palettes, ns.Fonts
 
 local Bar = {}
 Bar.__index = Bar
@@ -7,6 +7,8 @@ ns.Bar = Bar
 
 local EASE_SPEED = 8
 local LAYERS = { "fill", "quest", "rested" }
+local TICKS = 9
+local GLOW_OUTSET = 6
 
 local function setWidth(tex, w)
   if w < 0.5 then
@@ -14,6 +16,29 @@ local function setWidth(tex, w)
   else
     tex:SetWidth(w)
     tex:Show()
+  end
+end
+
+-- Horizontal gradient across the fill. Modern clients take ColorMixin objects, older ones
+-- take raw numbers; without either the fill keeps the palette's end colour.
+local function setGradient(tex, from, to)
+  if tex.SetGradient and CreateColor then
+    local ok = pcall(tex.SetGradient, tex, "HORIZONTAL",
+      CreateColor(from[1], from[2], from[3], 1), CreateColor(to[1], to[2], to[3], 1))
+    if ok then return end
+  end
+  if tex.SetGradient then
+    local ok = pcall(tex.SetGradient, tex, "HORIZONTAL", from[1], from[2], from[3], to[1], to[2], to[3])
+    if ok then return end
+  end
+  tex:SetVertexColor(to[1], to[2], to[3], 1)
+end
+
+local function setFont(fs, s, prefix)
+  local path = Fonts.resolve(s[prefix .. "Font"], Fonts.lsm())
+  local flags = Fonts.flags(s[prefix .. "FontOutline"])
+  if not fs:SetFont(path, s[prefix .. "FontSize"], flags) then
+    fs:SetFont(Fonts.resolve(Fonts.DEFAULT, nil), s[prefix .. "FontSize"], flags)
   end
 end
 
@@ -29,27 +54,45 @@ function Bar.create(source)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
 
-  self.bg = f:CreateTexture(nil, "BACKGROUND")
+  self.borderTex = f:CreateTexture(nil, "BACKGROUND", nil, -2)
+  self.bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
+  self.glow = f:CreateTexture(nil, "BACKGROUND", nil, 1)
+  self.glow:SetTexture(Styles.GLOW)
+  self.glow:SetBlendMode("ADD")
   self.rested = f:CreateTexture(nil, "BORDER")
   self.quest = f:CreateTexture(nil, "ARTWORK", nil, 0)
   self.fill = f:CreateTexture(nil, "ARTWORK", nil, 1)
-  self.spark = f:CreateTexture(nil, "OVERLAY")
+  self.gloss = f:CreateTexture(nil, "ARTWORK", nil, 2)
+  self.gloss:SetTexture(Styles.GLOSS)
+  self.spark = f:CreateTexture(nil, "OVERLAY", nil, 1)
+  self.spark:SetTexture(Styles.SPARK)
   self.spark:SetBlendMode("ADD")
-  self.border = {}
-  for i = 1, 4 do self.border[i] = f:CreateTexture(nil, "OVERLAY") end
+  self.ticks = {}
+  for i = 1, TICKS do self.ticks[i] = f:CreateTexture(nil, "OVERLAY", nil, 0) end
 
+  -- Rounded corners need mask textures, which older clients lack: the bar is then square.
+  if f.CreateMaskTexture then
+    self.innerMask = f:CreateMaskTexture()
+    self.innerMask:SetTexture(Styles.MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    self.outerMask = f:CreateMaskTexture()
+    self.outerMask:SetTexture(Styles.MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    self.outerMask:SetAllPoints(f)
+  end
+  self.masked = false
+
+  -- Texts live on a child frame so they always draw above every texture of the bar.
+  local overlay = CreateFrame("Frame", nil, f)
+  overlay:SetAllPoints(f)
+  overlay:SetFrameLevel(f:GetFrameLevel() + 2)
   local function fontString(justify)
-    local fs = f:CreateFontString(nil, "OVERLAY")
-    fs:SetFont(STANDARD_TEXT_FONT, 11, "OUTLINE")
+    local fs = overlay:CreateFontString(nil, "OVERLAY")
+    fs:SetFont(Fonts.resolve(Fonts.DEFAULT, nil), 11, "OUTLINE")
     fs:SetJustifyH(justify)
     return fs
   end
   self.textLeft = fontString("LEFT")
   self.textCenter = fontString("CENTER")
   self.textRight = fontString("RIGHT")
-  self.textLeft:SetPoint("LEFT", f, "LEFT", 6, 0)
-  self.textCenter:SetPoint("CENTER", f, "CENTER", 0, 0)
-  self.textRight:SetPoint("RIGHT", f, "RIGHT", -6, 0)
 
   self.current = { fill = 0, quest = 0, rested = 0 }
   self.target = { fill = 0, quest = 0, rested = 0 }
@@ -65,7 +108,9 @@ function Bar.create(source)
   f:SetScript("OnEnter", function()
     if ns.Tooltip then ns.Tooltip.Show(f) end
   end)
-  f:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  f:SetScript("OnLeave", function()
+    if ns.Tooltip then ns.Tooltip.Hide() end
+  end)
   f:SetScript("OnMouseUp", function(_, button)
     if button == "RightButton" and ns.OpenOptions then ns.OpenOptions() end
   end)
@@ -83,6 +128,15 @@ function Bar:SavePosition()
   ns.Settings().point = { point, relativeName, relativePoint, x, y }
 end
 
+function Bar:SetMasked(masked)
+  if not self.innerMask or masked == self.masked then return end
+  for _, tex in ipairs({ self.bg, self.rested, self.quest, self.fill, self.gloss }) do
+    if masked then tex:AddMaskTexture(self.innerMask) else tex:RemoveMaskTexture(self.innerMask) end
+  end
+  if masked then self.borderTex:AddMaskTexture(self.outerMask) else self.borderTex:RemoveMaskTexture(self.outerMask) end
+  self.masked = masked
+end
+
 function Bar:ApplySettings()
   local s = ns.Settings()
   local f = self.frame
@@ -92,48 +146,80 @@ function Bar:ApplySettings()
   f:ClearAllPoints()
   f:SetPoint(p[1], _G[p[2]] or UIParent, p[3], p[4], p[5])
 
-  self.style = Styles.defs[s.style] or Styles.defs.glossy
-  local b = self.style.border
+  local style = Styles.defs[s.style] or Styles.defs.smooth
+  self.style = style
+  local b = style.border
   self.innerWidth = s.width - 2 * b
 
   local _, class = UnitClass("player")
   local rc = RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-  local colors = Themes.colors(s.theme, {
+  local colors = Palettes.colors(s.palette, {
     classColor = rc and { rc.r, rc.g, rc.b } or nil,
     faction = UnitFactionGroup("player"),
   })
   self.colors = colors
 
-  self.bg:ClearAllPoints()
-  self.bg:SetAllPoints(f)
-  self.bg:SetColorTexture(colors.bg[1], colors.bg[2], colors.bg[3], 0.9)
+  self.borderTex:ClearAllPoints()
+  self.borderTex:SetAllPoints(f)
+  self.borderTex:SetColorTexture(colors.border[1], colors.border[2], colors.border[3], 1)
+  if b > 0 then self.borderTex:Show() else self.borderTex:Hide() end
 
-  local e = self.border
-  for i = 1, 4 do
-    e[i]:ClearAllPoints()
-    e[i]:SetColorTexture(colors.border[1], colors.border[2], colors.border[3], 1)
-  end
-  e[1]:SetPoint("TOPLEFT"); e[1]:SetPoint("TOPRIGHT"); e[1]:SetHeight(b)
-  e[2]:SetPoint("BOTTOMLEFT"); e[2]:SetPoint("BOTTOMRIGHT"); e[2]:SetHeight(b)
-  e[3]:SetPoint("TOPLEFT"); e[3]:SetPoint("BOTTOMLEFT"); e[3]:SetWidth(b)
-  e[4]:SetPoint("TOPRIGHT"); e[4]:SetPoint("BOTTOMRIGHT"); e[4]:SetWidth(b)
-
-  for _, tex in ipairs({ self.rested, self.quest, self.fill }) do
+  local inner = { self.bg, self.rested, self.quest, self.fill }
+  for _, tex in ipairs(inner) do
     tex:ClearAllPoints()
     tex:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
     tex:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", b, b)
-    tex:SetTexture(self.style.texture)
   end
-  self.fill:SetVertexColor(colors.fill[1], colors.fill[2], colors.fill[3], 1)
-  self.rested:SetVertexColor(colors.rested[1], colors.rested[2], colors.rested[3], 0.9)
-  self.quest:SetVertexColor(colors.quest[1], colors.quest[2], colors.quest[3], 0.55)
+  self.bg:SetWidth(self.innerWidth)
+  self.bg:SetColorTexture(colors.bg[1], colors.bg[2], colors.bg[3], 0.92)
+  if self.innerMask then
+    self.innerMask:ClearAllPoints()
+    self.innerMask:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
+    self.innerMask:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -b, b)
+  end
 
-  self.spark:SetTexture(Styles.SPARK)
+  for _, tex in ipairs({ self.rested, self.quest, self.fill }) do tex:SetTexture(style.texture) end
+  setGradient(self.fill, colors.fill.from, colors.fill.to)
+  self.rested:SetVertexColor(colors.rested[1], colors.rested[2], colors.rested[3], 0.6)
+  self.quest:SetVertexColor(colors.quest[1], colors.quest[2], colors.quest[3], 0.65)
+
+  self.gloss:ClearAllPoints()
+  self.gloss:SetPoint("TOPLEFT", f, "TOPLEFT", b, -b)
+  self.gloss:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -b, b)
+  if style.gloss then self.gloss:Show() else self.gloss:Hide() end
+
+  local a = colors.accent
+  self.glow:SetVertexColor(a[1], a[2], a[3], 0.85)
   self.spark:SetSize(14, s.height * 2)
 
-  local size = math.max(8, math.min(14, s.height - 4))
-  for _, fs in ipairs({ self.textLeft, self.textCenter, self.textRight }) do
-    fs:SetFont(STANDARD_TEXT_FONT, size, "OUTLINE")
+  for i, tick in ipairs(self.ticks) do
+    tick:ClearAllPoints()
+    tick:SetColorTexture(0, 0, 0, 0.75)
+    tick:SetWidth(1)
+    tick:SetPoint("TOP", f, "TOPLEFT", b + self.innerWidth * i / (TICKS + 1), -b)
+    tick:SetPoint("BOTTOM", f, "BOTTOMLEFT", b + self.innerWidth * i / (TICKS + 1), b)
+    if style.ticks then tick:Show() else tick:Hide() end
+  end
+
+  self:SetMasked(style.rounded)
+
+  local texts = { self.textLeft, self.textCenter, self.textRight }
+  for _, fs in ipairs(texts) do
+    fs:ClearAllPoints()
+    setFont(fs, s, "bar")
+    fs:SetTextColor(colors.text[1], colors.text[2], colors.text[3], 1)
+  end
+  if style.textPosition == "above" then
+    self.textLeft:SetPoint("BOTTOMLEFT", f, "TOPLEFT", 0, 3)
+    self.textCenter:SetPoint("BOTTOM", f, "TOP", 0, 3)
+    self.textRight:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", 0, 3)
+    -- Let the mouse reach the bar through its text too.
+    f:SetHitRectInsets(0, 0, -(s.barFontSize + 6), 0)
+  else
+    self.textLeft:SetPoint("LEFT", f, "LEFT", 6, 0)
+    self.textCenter:SetPoint("CENTER", f, "CENTER", 0, 0)
+    self.textRight:SetPoint("RIGHT", f, "RIGHT", -6, 0)
+    f:SetHitRectInsets(0, 0, 0, 0)
   end
 
   self:Layout()
@@ -145,8 +231,17 @@ function Bar:Layout()
   setWidth(self.quest, self.current.quest * inner)
   setWidth(self.fill, self.current.fill * inner)
 
-  local showSpark = self.style.spark and self.current.fill > 0.002 and self.current.fill < 0.998
-  if showSpark then
+  local fillShown = self.current.fill > 0.002
+  if self.style.glow and fillShown then
+    self.glow:ClearAllPoints()
+    self.glow:SetPoint("TOPLEFT", self.fill, "TOPLEFT", -GLOW_OUTSET, GLOW_OUTSET)
+    self.glow:SetPoint("BOTTOMRIGHT", self.fill, "BOTTOMRIGHT", GLOW_OUTSET, -GLOW_OUTSET)
+    self.glow:Show()
+  else
+    self.glow:Hide()
+  end
+
+  if self.style.spark and fillShown and self.current.fill < 0.998 then
     self.spark:ClearAllPoints()
     self.spark:SetPoint("CENTER", self.fill, "RIGHT", 0, 0)
     self.spark:Show()
@@ -202,8 +297,6 @@ function Bar:OnUpdate(elapsed)
   self.tooltipTimer = self.tooltipTimer + elapsed
   if self.tooltipTimer >= 1 then
     self.tooltipTimer = 0
-    if ns.Tooltip and GameTooltip:IsShown() and GameTooltip:GetOwner() == self.frame then
-      ns.Tooltip.Show(self.frame)
-    end
+    if ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) then ns.Tooltip.Show(self.frame) end
   end
 end
