@@ -10,7 +10,8 @@ local HISTORY_ROWS = 6
 -- A row is { label, value, color } where color is nil, "rested", "quest" or "muted",
 -- or { kind = "history", label, value, ratio } for one level of the history chart.
 -- `detailed` is the Shift view. Pure: everything it needs is passed in.
-function TooltipContent.build(snap, settings, store, opts, L, detailed)
+-- `extras.alts` (optional): other characters, from Characters.list, for the detailed view.
+function TooltipContent.build(snap, settings, store, opts, L, detailed, extras)
   local show = settings.tooltip
   local function num(n) return Calc.formatNumber(n, opts.number) end
   local function dur(s) return Calc.formatDuration(s, opts.units) end
@@ -34,7 +35,7 @@ function TooltipContent.build(snap, settings, store, opts, L, detailed)
       add(L["Progress"], pct(snap.percent))
       add(L["Remaining"], num(snap.remaining))
     end
-    if show.rested and snap.rested > 0 then add(L["Rested"], num(snap.rested), "rested") end
+    if show.rested and snap.rested > 0 and not detailed then add(L["Rested"], num(snap.rested), "rested") end
     if show.quests and snap.quests and snap.quests.total > 0 then
       add(L["Quests ready to turn in"], "+" .. num(snap.quests.total), "quest")
       if detailed then
@@ -90,8 +91,28 @@ function TooltipContent.build(snap, settings, store, opts, L, detailed)
     keep(g)
   end
 
+  -- Rested planner: how much, whether it is growing fast (rest area), when it is full.
+  if detailed and show.rested and not snap.isMaxLevel and snap.xpMax > 0 then
+    local g, add = group()
+    local timing = Calc.restedTiming(snap.rested, snap.xpMax, snap.resting)
+    add(L["Rested"], num(snap.rested) .. " (" .. pct(timing.percent) .. ")", "rested")
+    add(L["Resting"], snap.resting and L["Yes"] or L["No"])
+    add(L["Rested maximum"], num(timing.max))
+    add(L["Full in"], timing.timeToFull and timing.timeToFull > 0 and dur(timing.timeToFull) or L["Full"])
+    keep(g)
+  end
+
+  -- Other characters still leveling, with their estimated rested XP.
+  if detailed and show.rested and extras and extras.alts and #extras.alts > 0 then
+    local g, add = group()
+    for _, alt in ipairs(extras.alts) do
+      add(alt.name .. " (" .. alt.level .. ")", alt.restedPercent .. "%", "rested")
+    end
+    keep(g)
+  end
+
   content.groups = groups
-  if not detailed then content.hint = L["Hold Shift for details"] end
+  content.hint = detailed and L["hint.clicks"] or L["Hold Shift for details"]
   return content
 end
 
@@ -140,6 +161,6 @@ function TooltipContent.buildRep(snap, settings, opts, L, detailed)
     title = snap.name,
     subtitle = snap.standingLabel,
     groups = groups,
-    hint = (not detailed) and L["Hold Shift for details"] or nil,
+    hint = detailed and L["hint.repClicks"] or L["Hold Shift for details"],
   }
 end

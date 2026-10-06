@@ -73,9 +73,9 @@ test("detailed view adds quests, kills, session, level times and history", funct
   local c = TC.build(snap(), settings(), store(), opts, L, true)
   local f = flat(c)
   eq(f[1], {
-    "Progress=28%", "Remaining=16,705", "Rested=4,740", "Quests ready to turn in=+1,010",
+    "Progress=28%", "Remaining=16,705", "Quests ready to turn in=+1,010",
     "Ziz Fizziks=420", "Serres=320", "… and 1 more=",
-  })
+  }) -- rested XP moves to the rested planner group in the detailed view
   eq(f[2], { "Kills to level=~129", "Last gain=130" })
   eq(f[3], { "XP per hour=10,700", "Time to level=1h 34m", "XP gained=3,000", "Duration=30m 00s" })
   eq(f[4], { "Time played=1d 5h", "This level=1h 07m", "Average per level=1h 28m" })
@@ -83,7 +83,7 @@ test("detailed view adds quests, kills, session, level times and history", funct
   eq(c.groups[5][2].kind, "history")
   eq(c.groups[5][2].label, "Level 18")
   eq(c.groups[5][2].ratio, 1)
-  eq(c.hint, nil)
+  eq(c.hint, "hint.clicks")
 end)
 
 test("lines and groups without data are dropped", function()
@@ -94,6 +94,8 @@ test("lines and groups without data are dropped", function()
   eq(flat(c), {
     { "Progress=28%", "Remaining=16,705" },
     { "XP gained=0", "Duration=5s" },
+    -- the rested planner stays: time to full is useful even at 0 rested XP
+    { "Rested=0 (0%)", "Resting=No", "Rested maximum=34,800", "Full in=40d 0h" },
   })
 end)
 
@@ -153,4 +155,38 @@ test("reputation tooltip: exalted has no remaining lines", function()
   s.session.timeToNext = nil
   local c = TC.buildRep(s, repSettings, opts, L, true)
   eq(flat(c)[1], { "Progress=25%", "Standing=1,500 / 6,000" })
+end)
+
+-- ---------------------------------------------------- leveling tools
+
+test("default view hints at Shift; the detailed view hints at the clicks", function()
+  eq(TC.build(snap(), settings(), store(), opts, L, false).hint, "Hold Shift for details")
+  eq(TC.build(snap(), settings(), store(), opts, L, true).hint, "hint.clicks")
+  eq(TC.buildRep(repSnap(), repSettings, opts, L, true).hint, "hint.repClicks")
+end)
+
+test("detailed view: rested planner with resting state, maximum and time to full", function()
+  local s = snap()
+  s.resting = true
+  local c = TC.build(s, settings(), store(), opts, L, true)
+  local found
+  for _, g in ipairs(c.groups) do
+    if g[1].label == "Rested" then found = g end
+  end
+  truthy(found, "rested group")
+  eq(found[1].value, "4,740 (20%)")
+  eq(found[2].label, "Resting")
+  eq(found[3].label, "Rested maximum")
+  eq(found[3].value, "34,800")
+  eq(found[4].label, "Full in")
+end)
+
+test("detailed view: other characters with their estimated rested XP", function()
+  local alts = { { name = "Bob", level = 18, restedPercent = 45 }, { name = "Eve", level = 30, restedPercent = 150 } }
+  local c = TC.build(snap(), settings(), store(), opts, L, true, { alts = alts })
+  local last = c.groups[#c.groups]
+  eq(last[1].label, "Bob (18)")
+  eq(last[1].value, "45%")
+  eq(last[2].value, "150%")
+  eq(TC.build(snap(), settings(), store(), opts, L, false, { alts = alts }).groups[#c.groups], nil)
 end)
