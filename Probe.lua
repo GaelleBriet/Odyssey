@@ -16,6 +16,11 @@ local PROBES = {
   "UIParent.CreateMaskTexture", "ColorPickerFrame", "ColorPickerFrame.SetupColorPickerAndShow",
   "GetCursorPosition", "ShowUIPanel",
   "GetWatchedFactionInfo", "C_Reputation.GetWatchedFactionData", "FACTION_BAR_COLORS", "FACTION_STANDING_LABEL5",
+  "C_Reputation.GetNumFactions", "C_Reputation.GetFactionDataByIndex", "C_Reputation.SetWatchedFactionByIndex",
+  "GetNumFactions", "GetFactionInfo", "SetWatchedFactionIndex", "ToggleCharacter", "ReputationFrame",
+  "IsResting", "InCombatLockdown", "IsInInstance", "UnitIsDeadOrGhost", "UnitClass",
+  "ChatEdit_InsertLink", "ChatFrame_OpenChat", "ChatEdit_GetActiveWindow", "PlaySound", "SOUNDKIT",
+  "MenuUtil.CreateContextMenu", "EasyMenu", "UIDropDownMenu_Initialize",
 }
 
 local function resolve(path)
@@ -47,6 +52,14 @@ function ns.RunProbe()
       result.questInfoFields = table.concat(keys, ",")
     end
   end
+  -- Events cannot be looked up like functions: try registering them on a scratch frame.
+  result.events = {}
+  local scratch = CreateFrame("Frame")
+  for _, event in ipairs({ "PLAYER_CAMPING", "PLAYER_UPDATE_RESTING", "PLAYER_REGEN_DISABLED", "PLAYER_UNGHOST" }) do
+    result.events[event] = pcall(scratch.RegisterEvent, scratch, event)
+    print(("  event %-38s %s"):format(event, result.events[event] and "yes" or "NO"))
+  end
+  scratch:UnregisterAllEvents()
   OdysseyDB = OdysseyDB or {}
   OdysseyDB.probe = result
   print("Odyssey probe saved. Type /reload to write it to disk.")
