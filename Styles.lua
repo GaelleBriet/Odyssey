@@ -80,6 +80,7 @@ Styles.BORDER_SIZE = { none = 0, thin = 1, thick = 2 }
 Styles.GLOSS = MEDIA .. "gloss.tga"
 Styles.GLOW = MEDIA .. "glow.tga"
 Styles.MASK = MEDIA .. "round-mask.tga"
+Styles.RING = { thin = MEDIA .. "round-ring-thin.tga", thick = MEDIA .. "round-ring-thick.tga" }
 Styles.SPARK = MEDIA .. "spark.tga"
 Styles.TIPBAR = MEDIA .. "tipbar.tga"
 

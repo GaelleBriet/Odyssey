@@ -58,7 +58,11 @@ function Bar.create(source)
   self.shadow:SetVertexColor(0, 0, 0, 0.7)
   self.shadow:SetPoint("TOPLEFT", f, "TOPLEFT", -5, 2)
   self.shadow:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 5, -6)
+  -- The border is a hollow outline so a see-through background stays see-through:
+  -- four edge strips for square corners, or a ring-masked texture for rounded ones.
   self.borderTex = f:CreateTexture(nil, "BACKGROUND", nil, -2)
+  self.edges = {}
+  for i = 1, 4 do self.edges[i] = f:CreateTexture(nil, "BACKGROUND", nil, -2) end
   self.bg = f:CreateTexture(nil, "BACKGROUND", nil, 0)
   self.glow = f:CreateTexture(nil, "BACKGROUND", nil, 1)
   self.glow:SetTexture(Styles.GLOW)
@@ -79,7 +83,6 @@ function Bar.create(source)
     self.innerMask = f:CreateMaskTexture()
     self.innerMask:SetTexture(Styles.MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
     self.outerMask = f:CreateMaskTexture()
-    self.outerMask:SetTexture(Styles.MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
     self.outerMask:SetAllPoints(f)
   end
   self.masked = false
@@ -171,10 +174,27 @@ function Bar:ApplySettings()
   }, s)
   self.colors = colors
 
+  local rounded = s.corners == "rounded" and self.outerMask ~= nil
+  local bc = colors.border
   self.borderTex:ClearAllPoints()
   self.borderTex:SetAllPoints(f)
-  self.borderTex:SetColorTexture(colors.border[1], colors.border[2], colors.border[3], 1)
-  if b > 0 then self.borderTex:Show() else self.borderTex:Hide() end
+  self.borderTex:SetColorTexture(bc[1], bc[2], bc[3], 1)
+  if rounded and b > 0 then
+    self.outerMask:SetTexture(Styles.RING[s.border] or Styles.RING.thin, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    self.borderTex:Show()
+  else
+    self.borderTex:Hide()
+  end
+  local e = self.edges
+  for i = 1, 4 do
+    e[i]:ClearAllPoints()
+    e[i]:SetColorTexture(bc[1], bc[2], bc[3], 1)
+    if not rounded and b > 0 then e[i]:Show() else e[i]:Hide() end
+  end
+  e[1]:SetPoint("TOPLEFT"); e[1]:SetPoint("TOPRIGHT"); e[1]:SetHeight(math.max(b, 1))
+  e[2]:SetPoint("BOTTOMLEFT"); e[2]:SetPoint("BOTTOMRIGHT"); e[2]:SetHeight(math.max(b, 1))
+  e[3]:SetPoint("TOPLEFT", 0, -b); e[3]:SetPoint("BOTTOMLEFT", 0, b); e[3]:SetWidth(math.max(b, 1))
+  e[4]:SetPoint("TOPRIGHT", 0, -b); e[4]:SetPoint("BOTTOMRIGHT", 0, b); e[4]:SetWidth(math.max(b, 1))
 
   for _, tex in ipairs({ self.bg, self.rested, self.quest, self.fill }) do
     tex:ClearAllPoints()

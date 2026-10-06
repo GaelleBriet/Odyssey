@@ -98,3 +98,38 @@ test("current value of a menu is displayed by name", function()
   eq(Options.displayValue(control("texture"), s.texture), "texture.smooth")
   eq(Options.displayValue(control("preset"), nil), "Choose…")
 end)
+
+test("colour session: opening the wheel at the current colour writes nothing", function()
+  local s = { colors = {} }
+  local session = Options.colorSession(s, "fill", { 0.73, 0.55, 1 })
+  session.change(0.73, 0.55, 1)
+  eq(s.colors.fill, nil)
+end)
+
+test("colour session: a real change writes the override", function()
+  local s = { colors = {} }
+  local session = Options.colorSession(s, "rested", { 0.2, 0.4, 0.8 })
+  session.change(1, 0, 0)
+  eq(s.colors.rested, { 1, 0, 0 })
+end)
+
+test("colour session: cancel restores exactly what was there, nil included", function()
+  local s = { colors = {} }
+  local session = Options.colorSession(s, "fill", { 0.73, 0.55, 1 })
+  session.change(1, 0, 0)
+  session.cancel()
+  eq(s.colors.fill, nil)
+
+  s.colors.bg = { 0.1, 0.1, 0.1 }
+  session = Options.colorSession(s, "bg", { 0.1, 0.1, 0.1 })
+  session.change(0.5, 0.5, 0.5)
+  session.cancel()
+  eq(s.colors.bg, { 0.1, 0.1, 0.1 })
+end)
+
+test("colour session works when the settings have no colours table yet", function()
+  local s = {}
+  local session = Options.colorSession(s, "text", { 1, 1, 1 })
+  session.change(0, 0, 0)
+  eq(s.colors.text, { 0, 0, 0 })
+end)

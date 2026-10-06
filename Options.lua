@@ -119,6 +119,27 @@ function Options.applyValue(t, control, value)
   end
 end
 
+-- One use of the colour wheel on one element. The wheel reports its starting colour as soon
+-- as it opens, so a "change" equal to the start writes nothing; cancel puts back exactly the
+-- override that existed before (nil included).
+function Options.colorSession(settings, part, start)
+  if type(settings.colors) ~= "table" then settings.colors = {} end
+  local previous = settings.colors[part]
+  previous = previous and { previous[1], previous[2], previous[3] } or nil
+  local function same(r, g, b)
+    return math.abs(r - start[1]) < 0.002 and math.abs(g - start[2]) < 0.002 and math.abs(b - start[3]) < 0.002
+  end
+  local session = {}
+  function session.change(r, g, b)
+    if same(r, g, b) and settings.colors[part] == previous then return end
+    settings.colors[part] = { r, g, b }
+  end
+  function session.cancel()
+    settings.colors[part] = previous and { previous[1], previous[2], previous[3] } or nil
+  end
+  return session
+end
+
 function Options.resetColors(settings)
   settings.colors = {}
 end
@@ -130,17 +151,19 @@ end
 -- ------------------------------------------------------------ colour wheel
 
 -- Opens the game's colour picker; modern clients use SetupColorPickerAndShow, older ones
--- the func/cancelFunc fields. `onChange(r, g, b)` runs live and on cancel (previous colour).
-local function openColorPicker(color, onChange)
+-- the func/cancelFunc fields. `session` (Options.colorSession) records the choice;
+-- `onUpdate` redraws after every change or cancel.
+local function openColorPicker(color, session, onUpdate)
   local picker = ColorPickerFrame
   if not picker then return end
   local r, g, b = color[1], color[2], color[3]
   local function changed()
-    local nr, ng, nb = picker:GetColorRGB()
-    onChange(nr, ng, nb)
+    session.change(picker:GetColorRGB())
+    onUpdate()
   end
-  local function cancelled(previous)
-    if type(previous) == "table" and previous.r then onChange(previous.r, previous.g, previous.b) else onChange(r, g, b) end
+  local function cancelled()
+    session.cancel()
+    onUpdate()
   end
   if picker.SetupColorPickerAndShow then
     picker:SetupColorPickerAndShow({
@@ -149,6 +172,8 @@ local function openColorPicker(color, onChange)
     })
   else
     picker.hasOpacity = false
+    picker.opacityFunc = nil
+    picker.extraInfo = nil
     picker.previousValues = { r = r, g = g, b = b }
     picker.func = changed
     picker.cancelFunc = cancelled
@@ -407,10 +432,7 @@ function Options.create()
         local s = ns.Settings()
         local colors = (ns.bar and ns.bar.colors) or Palettes.effective(s.palette, {}, s)
         local start = control.part == "fill" and colors.fill.to or colors[control.part]
-        openColorPicker(start, function(r, g, b)
-          Options.applyValue(s, control, { r, g, b })
-          changed(control)
-        end)
+        openColorPicker(start, Options.colorSession(s, control.part, start), function() changed(control) end)
       end)
       widget.reset:SetScript("OnClick", function()
         Defaults.set(ns.Settings(), control.key, nil)

@@ -77,6 +77,23 @@ def round_mask(x, y):
     return (255, 255, 255, int(255 * a))
 
 
+def pill_alpha(x, y, w, h, r):
+    cx = min(max(x + 0.5, r), w - r)
+    d = ((x + 0.5 - cx) ** 2 + (y + 0.5 - h / 2.0) ** 2) ** 0.5
+    return max(0.0, min(1.0, r - d + 0.5))
+
+
+def ring(thickness):
+    # Hollow pill: the outer pill minus a pill inset by `thickness` pixels (used as a border mask).
+    def pixel(x, y):
+        outer = pill_alpha(x, y, 512, 16, 8.0)
+        inner = pill_alpha(x - thickness, y - thickness, 512 - 2 * thickness, 16 - 2 * thickness, 8.0 - thickness)
+        if x < thickness or y < thickness or x >= 512 - thickness or y >= 16 - thickness:
+            inner = 0.0
+        return (255, 255, 255, int(255 * max(0.0, outer - inner)))
+    return pixel
+
+
 def spark(x, y):
     dx = abs(x - 7.5) / 7.5
     dy = abs(y - 31.5) / 31.5
@@ -96,6 +113,8 @@ if __name__ == "__main__":
     write_tga("gloss.tga", 128, 32, gloss)
     write_tga("glow.tga", 64, 32, glow)
     write_tga("round-mask.tga", 512, 16, round_mask)
+    write_tga("round-ring-thin.tga", 512, 16, ring(1))
+    write_tga("round-ring-thick.tga", 512, 16, ring(2))
     write_tga("spark.tga", 16, 64, spark)
     write_tga("tipbar.tga", 16, 16, tipbar)
     print("textures written to", os.path.normpath(OUT))
