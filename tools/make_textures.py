@@ -33,6 +33,22 @@ def smoothstep(edge0, edge1, x):
     return t * t * (3 - 2 * t)
 
 
+def flat(x, y):
+    return grey(255)
+
+
+def gradient(x, y):
+    return grey(255 - int(95 * y / 31))
+
+
+def glossy(x, y):
+    if y == 0:
+        return grey(255)
+    if y < 15:
+        return grey(max(222, 248 - 2 * y))
+    return grey(max(130, 190 - 4 * (y - 15)))
+
+
 def fill(x, y):
     # Subtle vertical shading; the palette colour and gradient are applied in game.
     return grey(255 - int(55 * y / 31))
@@ -73,6 +89,9 @@ def tipbar(x, y):
 
 
 if __name__ == "__main__":
+    write_tga("flat.tga", 128, 32, flat)
+    write_tga("gradient.tga", 128, 32, gradient)
+    write_tga("glossy.tga", 128, 32, glossy)
     write_tga("fill.tga", 128, 32, fill)
     write_tga("gloss.tga", 128, 32, gloss)
     write_tga("glow.tga", 64, 32, glow)
