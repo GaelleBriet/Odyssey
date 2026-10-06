@@ -40,17 +40,24 @@ local function setFont(fs, s, prefix)
     Fonts.flags(s[prefix .. "FontOutline"]))
 end
 
-function Bar.create(source)
+-- opts.parent + opts.width make a preview bar (inside the settings window): same drawing,
+-- no dragging, no tooltip, no visibility fading, no effect on the Blizzard bar.
+function Bar.create(source, opts)
+  opts = opts or {}
   local self = setmetatable({}, Bar)
   self.source = source
+  self.preview = opts.parent ~= nil
+  self.previewWidth = opts.width
 
-  local f = CreateFrame("Frame", "OdysseyBar", UIParent)
+  local f = CreateFrame("Frame", (not self.preview) and "OdysseyBar" or nil, opts.parent or UIParent)
   self.frame = f
-  f:SetFrameStrata("MEDIUM")
-  f:SetClampedToScreen(true)
-  f:SetMovable(true)
-  f:EnableMouse(true)
-  f:RegisterForDrag("LeftButton")
+  if not self.preview then
+    f:SetFrameStrata("MEDIUM")
+    f:SetClampedToScreen(true)
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+  end
 
   -- Soft drop shadow under the bar (smooth style), drawn from the glow texture in black.
   self.shadow = f:CreateTexture(nil, "BACKGROUND", nil, -3)
@@ -108,6 +115,7 @@ function Bar.create(source)
   self.state = { hover = false, moving = false, tooltip = false }
   self.alpha = 1
 
+  if not self.preview then
   f:SetScript("OnDragStart", function()
     if not ns.Settings().locked then
       self.state.moving = true
@@ -130,6 +138,7 @@ function Bar.create(source)
   f:SetScript("OnMouseUp", function(_, button)
     if button == "RightButton" and ns.OpenOptions then ns.OpenOptions() end
   end)
+  end
   f:SetScript("OnUpdate", function(_, elapsed) self:OnUpdate(elapsed) end)
 
   source:Subscribe(function() self:Update() end)
@@ -156,15 +165,18 @@ end
 function Bar:ApplySettings()
   local s = ns.Settings()
   local f = self.frame
-  f:SetSize(s.width, s.height)
-  f:SetScale(s.scale)
-  local p = s.point
-  f:ClearAllPoints()
-  f:SetPoint(p[1], _G[p[2]] or UIParent, p[3], p[4], p[5])
+  local width = self.preview and self.previewWidth or s.width
+  f:SetSize(width, s.height)
+  if not self.preview then
+    f:SetScale(s.scale)
+    local p = s.point
+    f:ClearAllPoints()
+    f:SetPoint(p[1], _G[p[2]] or UIParent, p[3], p[4], p[5])
+  end
 
   self.look = { glow = s.glow, spark = s.spark }
   local b = Styles.BORDER_SIZE[s.border] or 1
-  self.innerWidth = s.width - 2 * b
+  self.innerWidth = width - 2 * b
 
   local _, class = UnitClass("player")
   local rc = RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
@@ -202,6 +214,7 @@ function Bar:ApplySettings()
     tex:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", b, b)
   end
   self.bg:SetWidth(self.innerWidth)
+  if self.preview then f:SetAlpha(s.barAlpha or 1) end
   self.bg:SetColorTexture(colors.bg[1], colors.bg[2], colors.bg[3], s.bgOpacity)
   if self.innerMask then
     self.innerMask:ClearAllPoints()
@@ -300,9 +313,11 @@ function Bar:Update()
   local snap = self.source:Get()
   self.snap = snap
 
-  local hidden = snap.isMaxLevel and s.maxLevelBehavior == "hide"
-  if hidden then self.frame:Hide() else self.frame:Show() end
-  ns.Compat.setNativeXPBarHidden(s.hideNativeBar and not hidden)
+  if not self.preview then
+    local hidden = snap.isMaxLevel and s.maxLevelBehavior == "hide"
+    if hidden then self.frame:Hide() else self.frame:Show() end
+    ns.Compat.setNativeXPBarHidden(s.hideNativeBar and not hidden)
+  end
 
   self.target = Calc.barTargets(snap, s)
   -- Snap back after a level-up instead of sliding backwards.
@@ -334,6 +349,8 @@ function Bar:OnUpdate(elapsed)
     end
   end
   if moved then self:Layout() end
+
+  if self.preview then return end
 
   -- Mouseover visibility: fade toward the target opacity.
   self.state.tooltip = ns.Tooltip and ns.Tooltip.IsShownFor(self.frame) or false

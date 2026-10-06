@@ -6,87 +6,117 @@ local L = ns.L
 local Options = {}
 ns.Options = Options
 
--- ------------------------------------------------------------------ model
-
-Options.ROWS = 12 -- rows per column; two columns per tab
-
-Options.TABS = {
-  { key = "bar", label = "tab.bar" },
-  { key = "colors", label = "tab.colors" },
-  { key = "texts", label = "tab.texts" },
-  { key = "tooltip", label = "tab.tooltip" },
-}
+-- ======================================================================== model
 
 local function named(prefix) return function(v) return L[prefix .. tostring(v)] end end
 local function percent(v) return string.format("%d %%", math.floor(v * 100 + 0.5)) end
 local OUTLINES = { "NONE", "OUTLINE", "THICKOUTLINE" }
 
--- kind "header": a sub-section title;
+-- Sidebar sections; `preview` = "bar" or "tooltip" shows a live preview at the top.
+Options.SECTIONS = {
+  { key = "bar", label = "section.bar", preview = "bar", cards = {
+    { key = "appearance", label = "card.appearance" },
+    { key = "effects", label = "card.effects" },
+    { key = "size", label = "card.size" },
+    { key = "visibility", label = "card.visibility" },
+  } },
+  { key = "colors", label = "section.colors", preview = "bar", cards = {
+    { key = "palette", label = "card.palette" },
+    { key = "custom", label = "card.custom" },
+  } },
+  { key = "texts", label = "section.texts", preview = "bar", cards = {
+    { key = "content", label = "card.content" },
+    { key = "font", label = "card.font" },
+  } },
+  { key = "tooltip", label = "section.tooltip", preview = "tooltip", cards = {
+    { key = "font", label = "card.font" },
+    { key = "window", label = "card.window" },
+    { key = "blocks", label = "card.blocks" },
+  } },
+  { key = "general", label = "section.general", cards = {
+    { key = "behaviour", label = "card.behaviour" },
+    { key = "data", label = "card.data" },
+    { key = "about", label = "card.about" },
+  } },
+}
+
+-- kind "menu": dropdown from `values` (shown through `display`) or a `source`
+--   (presets, palettes, fonts, textures); `preset = true` applies a preset instead of storing;
 -- kind "slider": continuous value between `min` and `max`, snapped to `step`;
--- kind "check": on/off; kind "menu": dropdown from `values` (shown through `display`) or from
--- a `source` (presets, palettes, fonts, textures); kind "color": swatch opening the colour wheel.
+-- kind "check": on/off; kind "color": swatch opening the colour wheel;
+-- kind "action": a button running Options.ACTIONS[action]; kind "info": a read-only line.
 -- `account = true` writes to OdysseyDB instead of the active settings.
--- `preset = true`: picking a value applies a preset instead of storing it.
--- `enabledWhen = { key, value }`: the control is greyed out unless that setting has that value.
+-- `enabledWhen = { key, value }`: greyed out unless that setting has that value.
+local function c(section, card, key, kind, label, extra)
+  local control = { section = section, card = card, key = key, kind = kind, label = label }
+  for k, v in pairs(extra or {}) do control[k] = v end
+  return control
+end
+
 Options.CONTROLS = {
-  -- Bar, first column: the look
-  { tab = "bar", key = "preset", kind = "menu", label = "Preset", source = "presets", preset = true },
-  { tab = "bar", key = "texture", kind = "menu", label = "Texture", source = "textures" },
-  { tab = "bar", key = "corners", kind = "menu", label = "Corners", values = { "square", "rounded" }, display = named("corners.") },
-  { tab = "bar", key = "border", kind = "menu", label = "Border", values = { "none", "thin", "thick" }, display = named("border.") },
-  { tab = "bar", key = "ticks", kind = "menu", label = "Ticks", values = { 0, 10, 20 }, display = named("ticks.") },
-  { tab = "bar", key = "gloss", kind = "check", label = "Gloss" },
-  { tab = "bar", key = "shadow", kind = "check", label = "Shadow" },
-  { tab = "bar", key = "glow", kind = "check", label = "Glow" },
-  { tab = "bar", key = "spark", kind = "check", label = "Spark" },
-  { tab = "bar", key = "showQuestSegment", kind = "check", label = "Show quest XP" },
-  { tab = "bar", key = "showRestedSegment", kind = "check", label = "Show rested XP" },
-  { tab = "bar", key = "bgOpacity", kind = "slider", label = "Background opacity", min = 0, max = 1, step = 0.05, display = percent },
-  -- Bar, second column: opacity, size, visibility, behaviour
-  { tab = "bar", key = "barAlpha", kind = "slider", label = "Bar opacity", min = 0.1, max = 1, step = 0.05, display = percent },
-  { tab = "bar", key = "width", kind = "slider", label = "Width", min = 200, max = 1200, step = 10 },
-  { tab = "bar", key = "height", kind = "slider", label = "Height", min = 2, max = 40, step = 1 },
-  { tab = "bar", key = "scale", kind = "slider", label = "Scale", min = 0.5, max = 2, step = 0.05, display = percent },
-  { tab = "bar", key = "header.visibility", kind = "header", label = "Visibility" },
-  { tab = "bar", key = "visibility", kind = "menu", label = "Mode", values = { "always", "mouseover" }, display = named("visibility.") },
-  { tab = "bar", key = "fadedAlpha", kind = "slider", label = "Opacity when hidden", min = 0, max = 1, step = 0.05, display = percent,
-    enabledWhen = { key = "visibility", value = "mouseover" } },
-  { tab = "bar", key = "maxLevelBehavior", kind = "menu", label = "At max level", values = { "hide", "show" }, display = named("max.") },
-  { tab = "bar", key = "locked", kind = "check", label = "Lock bar" },
-  { tab = "bar", key = "hideNativeBar", kind = "check", label = "Hide Blizzard XP bar" },
-  { tab = "bar", key = "perCharacter", kind = "check", label = "Settings per character", account = true },
-  -- Colours
-  { tab = "colors", key = "palette", kind = "menu", label = "Palette", source = "palettes" },
-  { tab = "colors", key = "borderColor", kind = "menu", label = "Border color", values = { "palette", "black", "gold" }, display = named("borderColor.") },
-  { tab = "colors", key = "colors.fill", kind = "color", label = "color.fill", part = "fill" },
-  { tab = "colors", key = "colors.rested", kind = "color", label = "color.rested", part = "rested" },
-  { tab = "colors", key = "colors.quest", kind = "color", label = "color.quest", part = "quest" },
-  { tab = "colors", key = "colors.bg", kind = "color", label = "color.bg", part = "bg" },
-  { tab = "colors", key = "colors.border", kind = "color", label = "color.border", part = "border" },
-  { tab = "colors", key = "colors.text", kind = "color", label = "color.text", part = "text" },
-  -- Texts
-  { tab = "texts", key = "textLeft", kind = "menu", label = "Left text", values = Texts.KEYS, display = named("text.") },
-  { tab = "texts", key = "textCenter", kind = "menu", label = "Center text", values = Texts.KEYS, display = named("text.") },
-  { tab = "texts", key = "textRight", kind = "menu", label = "Right text", values = Texts.KEYS, display = named("text.") },
-  { tab = "texts", key = "textPosition", kind = "menu", label = "Text position", values = { "inside", "above", "below" }, display = named("textPosition.") },
-  { tab = "texts", key = "barFont", kind = "menu", label = "Bar font", source = "fonts" },
-  { tab = "texts", key = "barFontSize", kind = "menu", label = "Bar text size", values = { 8, 9, 10, 11, 12, 13, 14, 16, 18 } },
-  { tab = "texts", key = "barFontOutline", kind = "menu", label = "Bar text outline", values = OUTLINES, display = named("outline.") },
-  { tab = "texts", key = "abbreviate", kind = "check", label = "Abbreviate numbers" },
-  -- Tooltip
-  { tab = "tooltip", key = "tooltipFont", kind = "menu", label = "Tooltip font", source = "fonts" },
-  { tab = "tooltip", key = "tooltipFontSize", kind = "menu", label = "Tooltip text size", values = { 10, 11, 12, 13, 14, 16 } },
-  { tab = "tooltip", key = "tooltipFontOutline", kind = "menu", label = "Tooltip text outline", values = OUTLINES, display = named("outline.") },
-  { tab = "tooltip", key = "tooltipBgOpacity", kind = "slider", label = "Tooltip background opacity", min = 0, max = 1, step = 0.05, display = percent },
-  { tab = "tooltip", key = "tooltipScale", kind = "slider", label = "Tooltip scale", min = 0.5, max = 2, step = 0.05, display = percent },
-  { tab = "tooltip", key = "tooltipAnchor", kind = "menu", label = "Tooltip position", values = { "bar", "cursor" }, display = named("tooltipAnchor.") },
-  { tab = "tooltip", key = "tooltip.level", kind = "check", label = "opt.tooltip.level" },
-  { tab = "tooltip", key = "tooltip.rested", kind = "check", label = "opt.tooltip.rested" },
-  { tab = "tooltip", key = "tooltip.quests", kind = "check", label = "opt.tooltip.quests" },
-  { tab = "tooltip", key = "tooltip.kills", kind = "check", label = "opt.tooltip.kills" },
-  { tab = "tooltip", key = "tooltip.session", kind = "check", label = "opt.tooltip.session" },
-  { tab = "tooltip", key = "tooltip.played", kind = "check", label = "opt.tooltip.played" },
-  { tab = "tooltip", key = "tooltip.history", kind = "check", label = "opt.tooltip.history" },
+  c("bar", "appearance", "preset", "menu", "Preset", { source = "presets", preset = true }),
+  c("bar", "appearance", "texture", "menu", "Texture", { source = "textures" }),
+  c("bar", "appearance", "corners", "menu", "Corners", { values = { "square", "rounded" }, display = named("corners.") }),
+  c("bar", "appearance", "border", "menu", "Border", { values = { "none", "thin", "thick" }, display = named("border.") }),
+  c("bar", "appearance", "ticks", "menu", "Ticks", { values = { 0, 10, 20 }, display = named("ticks.") }),
+
+  c("bar", "effects", "gloss", "check", "Gloss"),
+  c("bar", "effects", "shadow", "check", "Shadow"),
+  c("bar", "effects", "glow", "check", "Glow"),
+  c("bar", "effects", "spark", "check", "Spark"),
+  c("bar", "effects", "showQuestSegment", "check", "Show quest XP"),
+  c("bar", "effects", "showRestedSegment", "check", "Show rested XP"),
+
+  c("bar", "size", "width", "slider", "Width", { min = 200, max = 1200, step = 10 }),
+  c("bar", "size", "height", "slider", "Height", { min = 2, max = 40, step = 1 }),
+  c("bar", "size", "scale", "slider", "Scale", { min = 0.5, max = 2, step = 0.05, display = percent }),
+  c("bar", "size", "bgOpacity", "slider", "Background opacity", { min = 0, max = 1, step = 0.05, display = percent }),
+  c("bar", "size", "barAlpha", "slider", "Bar opacity", { min = 0.1, max = 1, step = 0.05, display = percent }),
+
+  c("bar", "visibility", "visibility", "menu", "Mode", { values = { "always", "mouseover" }, display = named("visibility.") }),
+  c("bar", "visibility", "fadedAlpha", "slider", "Opacity when hidden", { min = 0, max = 1, step = 0.05, display = percent,
+    enabledWhen = { key = "visibility", value = "mouseover" } }),
+
+  c("colors", "palette", "palette", "menu", "Palette", { source = "palettes" }),
+  c("colors", "palette", "borderColor", "menu", "Border color", { values = { "palette", "black", "gold" }, display = named("borderColor.") }),
+  c("colors", "custom", "colors.fill", "color", "color.fill", { part = "fill" }),
+  c("colors", "custom", "colors.rested", "color", "color.rested", { part = "rested" }),
+  c("colors", "custom", "colors.quest", "color", "color.quest", { part = "quest" }),
+  c("colors", "custom", "colors.bg", "color", "color.bg", { part = "bg" }),
+  c("colors", "custom", "colors.border", "color", "color.border", { part = "border" }),
+  c("colors", "custom", "colors.text", "color", "color.text", { part = "text" }),
+  c("colors", "custom", "action.resetColors", "action", "Reset to palette colors", { action = "resetColors" }),
+
+  c("texts", "content", "textLeft", "menu", "Left text", { values = Texts.KEYS, display = named("text.") }),
+  c("texts", "content", "textCenter", "menu", "Center text", { values = Texts.KEYS, display = named("text.") }),
+  c("texts", "content", "textRight", "menu", "Right text", { values = Texts.KEYS, display = named("text.") }),
+  c("texts", "content", "textPosition", "menu", "Text position", { values = { "inside", "above", "below" }, display = named("textPosition.") }),
+  c("texts", "font", "barFont", "menu", "Font", { source = "fonts" }),
+  c("texts", "font", "barFontSize", "menu", "Size", { values = { 8, 9, 10, 11, 12, 13, 14, 16, 18 } }),
+  c("texts", "font", "barFontOutline", "menu", "Outline", { values = OUTLINES, display = named("outline.") }),
+  c("texts", "font", "abbreviate", "check", "Abbreviate numbers"),
+
+  c("tooltip", "font", "tooltipFont", "menu", "Font", { source = "fonts" }),
+  c("tooltip", "font", "tooltipFontSize", "menu", "Size", { values = { 10, 11, 12, 13, 14, 16 } }),
+  c("tooltip", "font", "tooltipFontOutline", "menu", "Outline", { values = OUTLINES, display = named("outline.") }),
+  c("tooltip", "window", "tooltipBgOpacity", "slider", "Background opacity", { min = 0, max = 1, step = 0.05, display = percent }),
+  c("tooltip", "window", "tooltipScale", "slider", "Scale", { min = 0.5, max = 2, step = 0.05, display = percent }),
+  c("tooltip", "window", "tooltipAnchor", "menu", "Position", { values = { "bar", "cursor" }, display = named("tooltipAnchor.") }),
+  c("tooltip", "blocks", "tooltip.level", "check", "opt.tooltip.level"),
+  c("tooltip", "blocks", "tooltip.rested", "check", "opt.tooltip.rested"),
+  c("tooltip", "blocks", "tooltip.quests", "check", "opt.tooltip.quests"),
+  c("tooltip", "blocks", "tooltip.kills", "check", "opt.tooltip.kills"),
+  c("tooltip", "blocks", "tooltip.session", "check", "opt.tooltip.session"),
+  c("tooltip", "blocks", "tooltip.played", "check", "opt.tooltip.played"),
+  c("tooltip", "blocks", "tooltip.history", "check", "opt.tooltip.history"),
+
+  c("general", "behaviour", "locked", "check", "Lock bar"),
+  c("general", "behaviour", "hideNativeBar", "check", "Hide Blizzard XP bar"),
+  c("general", "behaviour", "maxLevelBehavior", "menu", "At max level", { values = { "hide", "show" }, display = named("max.") }),
+  c("general", "behaviour", "perCharacter", "check", "Settings per character", { account = true }),
+  c("general", "data", "action.resetSession", "action", "Reset session", { action = "resetSession" }),
+  c("general", "data", "action.clearHistory", "action", "Clear history", { action = "clearHistory" }),
+  c("general", "about", "info.version", "info", "Version", { info = "version" }),
 }
 
 -- Items of a menu: { value, text } plus `font` or `texture` for a preview.
@@ -130,7 +160,6 @@ function Options.displayValue(control, value)
   return tostring(value)
 end
 
--- The value a control currently shows (the visibility menu reads two fields).
 function Options.currentValue(t, control)
   return Defaults.get(t, control.key)
 end
@@ -174,45 +203,92 @@ function Options.resetColors(settings)
   settings.colors = {}
 end
 
+Options.ACTIONS = {
+  resetColors = function() Options.resetColors(ns.Settings()) end,
+  resetSession = function()
+    ns.source:resetSession()
+    print("|cff9966ffOdyssey|r: " .. L["Session reset."])
+  end,
+  clearHistory = function()
+    History.reset(ns.CharData().history)
+    print("|cff9966ffOdyssey|r: " .. L["History cleared."])
+  end,
+}
+
+local function addonVersion()
+  local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+  local version = get and get(ADDON, "Version")
+  if not version or version:find("@") then return L["development version"] end
+  return version
+end
+
 local function target(control)
   return control.account and OdysseyDB or ns.Settings()
 end
 
--- ------------------------------------------------------------ colour wheel
+-- ======================================================================= style
 
--- Opens the game's colour picker; modern clients use SetupColorPickerAndShow, older ones
--- the func/cancelFunc fields. `session` (Options.colorSession) records the choice;
--- `onUpdate` redraws after every change or cancel.
-local function openColorPicker(color, session, onUpdate)
-  local picker = ColorPickerFrame
-  if not picker then return end
-  local r, g, b = color[1], color[2], color[3]
-  local function changed()
-    session.change(picker:GetColorRGB())
-    onUpdate()
-  end
-  local function cancelled()
-    session.cancel()
-    onUpdate()
-  end
-  if picker.SetupColorPickerAndShow then
-    picker:SetupColorPickerAndShow({
-      r = r, g = g, b = b, hasOpacity = false,
-      swatchFunc = changed, cancelFunc = cancelled,
-    })
-  else
-    picker.hasOpacity = false
-    picker.opacityFunc = nil
-    picker.extraInfo = nil
-    picker.previousValues = { r = r, g = g, b = b }
-    picker.func = changed
-    picker.cancelFunc = cancelled
-    picker:SetColorRGB(r, g, b)
-    if ShowUIPanel then ShowUIPanel(picker) else picker:Show() end
-  end
+local C = {
+  window = { 0.06, 0.05, 0.08, 0.97 },
+  sidebar = { 0.045, 0.04, 0.06, 1 },
+  card = { 0.105, 0.09, 0.15, 1 },
+  cardEdge = { 0.165, 0.14, 0.22, 1 },
+  widget = { 0.14, 0.12, 0.2, 1 },
+  widgetEdge = { 0.26, 0.22, 0.34, 1 },
+  text = { 0.91, 0.89, 0.94 },
+  muted = { 0.6, 0.57, 0.68 },
+}
+
+local function solid(parent, layer, color, sublevel)
+  local tex = parent:CreateTexture(nil, layer, nil, sublevel)
+  tex:SetColorTexture(color[1], color[2], color[3], color[4] or 1)
+  return tex
 end
 
--- ---------------------------------------------------------------- the menu
+local function fontString(parent, size, color, template)
+  local fs = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlight")
+  local path = fs:GetFont()
+  if path then fs:SetFont(path, size, "") end
+  fs:SetTextColor(color[1], color[2], color[3], 1)
+  fs:SetJustifyH("LEFT")
+  return fs
+end
+
+local function accentColor()
+  local s = ns.Settings()
+  local colors = (ns.bar and ns.bar.colors) or Palettes.effective(s.palette, {}, s)
+  return colors.accent, colors
+end
+
+-- Flat button in the window's style; `kind = "menu"` adds a small marker on the right.
+local function flatButton(parent, width, height, text, kind)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(width, height)
+  local edge = solid(b, "BACKGROUND", C.widgetEdge)
+  edge:SetAllPoints()
+  local bg = solid(b, "BORDER", C.widget)
+  bg:SetPoint("TOPLEFT", 1, -1)
+  bg:SetPoint("BOTTOMRIGHT", -1, 1)
+  local hl = b:CreateTexture(nil, "HIGHLIGHT")
+  hl:SetAllPoints()
+  hl:SetColorTexture(1, 1, 1, 0.08)
+  b.label = fontString(b, 11, C.text)
+  b.label:SetPoint("LEFT", 8, 0)
+  b.label:SetPoint("RIGHT", kind == "menu" and -16 or -8, 0)
+  b.label:SetWordWrap(false)
+  if kind ~= "menu" then b.label:SetJustifyH("CENTER") end
+  if kind == "menu" then
+    b.marker = b:CreateTexture(nil, "ARTWORK")
+    b.marker:SetSize(5, 5)
+    b.marker:SetPoint("RIGHT", -7, 0)
+    b.marker:SetColorTexture(0.73, 0.55, 1, 1)
+  end
+  function b:SetText(t) self.label:SetText(t) end
+  b:SetText(text or "")
+  return b
+end
+
+-- ======================================================================= menu
 
 local MENU_WIDTH, ITEM_HEIGHT, MENU_ROWS = 220, 20, 12
 local menu
@@ -235,13 +311,11 @@ local function createMenu()
   catcher:SetScript("OnClick", function() menu:Hide() end)
   menu:SetScript("OnShow", function() catcher:Show() end)
   menu:SetScript("OnHide", function() catcher:Hide() end)
-  local edge = menu:CreateTexture(nil, "BACKGROUND", nil, -1)
+  local edge = solid(menu, "BACKGROUND", C.widgetEdge, -1)
   edge:SetPoint("TOPLEFT", -1, 1)
   edge:SetPoint("BOTTOMRIGHT", 1, -1)
-  edge:SetColorTexture(0.35, 0.3, 0.45, 1)
-  local bg = menu:CreateTexture(nil, "BACKGROUND")
+  local bg = solid(menu, "BACKGROUND", { 0.05, 0.05, 0.07, 0.98 })
   bg:SetAllPoints()
-  bg:SetColorTexture(0.05, 0.05, 0.07, 0.97)
   menu.rows = {}
   for i = 1, MENU_ROWS do
     local row = CreateFrame("Button", nil, menu)
@@ -313,62 +387,77 @@ local function openMenu(button, control, current, onPick)
   menu:Show()
 end
 
--- ---------------------------------------------------------------- the panel
+-- ================================================================ colour wheel
 
-local COLUMN_WIDTH = 300
-local LABEL_WIDTH = 150
-local WIDGET_WIDTH = 135
-local ROW_HEIGHT = 28
-local TOP = -84 -- below the title and the tab buttons
-
-local function makeButton(parent, width, text)
-  local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-  b:SetSize(width, 22)
-  b:SetText(text)
-  return b
+-- Opens the game's colour picker; modern clients use SetupColorPickerAndShow, older ones
+-- the func/cancelFunc fields. `session` (Options.colorSession) records the choice;
+-- `onUpdate` redraws after every change or cancel.
+local function openColorPicker(color, session, onUpdate)
+  local picker = ColorPickerFrame
+  if not picker then return end
+  local r, g, b = color[1], color[2], color[3]
+  local function changed()
+    session.change(picker:GetColorRGB())
+    onUpdate()
+  end
+  local function cancelled()
+    session.cancel()
+    onUpdate()
+  end
+  if picker.SetupColorPickerAndShow then
+    picker:SetupColorPickerAndShow({
+      r = r, g = g, b = b, hasOpacity = false,
+      swatchFunc = changed, cancelFunc = cancelled,
+    })
+  else
+    picker.hasOpacity = false
+    picker.opacityFunc = nil
+    picker.extraInfo = nil
+    picker.previousValues = { r = r, g = g, b = b }
+    picker.func = changed
+    picker.cancelFunc = cancelled
+    picker:SetColorRGB(r, g, b)
+    if ShowUIPanel then ShowUIPanel(picker) else picker:Show() end
+  end
 end
 
--- A flat checkbox drawn by Odyssey (no template whose name varies between clients).
+-- ===================================================================== widgets
+
+local WIDGET_WIDTH = 130
+
 local function makeCheck(parent)
   local box = CreateFrame("Button", nil, parent)
   box:SetSize(18, 18)
-  local edge = box:CreateTexture(nil, "BACKGROUND")
+  local edge = solid(box, "BACKGROUND", C.widgetEdge)
   edge:SetAllPoints()
-  edge:SetColorTexture(0.45, 0.42, 0.55, 1)
-  local inner = box:CreateTexture(nil, "BORDER")
+  local inner = solid(box, "BORDER", { 0.07, 0.07, 0.1, 1 })
   inner:SetPoint("TOPLEFT", 1, -1)
   inner:SetPoint("BOTTOMRIGHT", -1, 1)
-  inner:SetColorTexture(0.07, 0.07, 0.1, 1)
-  box.mark = box:CreateTexture(nil, "ARTWORK")
+  box.mark = solid(box, "ARTWORK", { 0.73, 0.55, 1, 1 })
   box.mark:SetPoint("TOPLEFT", 4, -4)
   box.mark:SetPoint("BOTTOMRIGHT", -4, 4)
-  box.mark:SetColorTexture(0.73, 0.55, 1, 1)
   local hl = box:CreateTexture(nil, "HIGHLIGHT")
   hl:SetAllPoints()
   hl:SetColorTexture(1, 1, 1, 0.12)
   return box
 end
 
--- A slider drawn by Odyssey: drag, click on the track or use the mouse wheel.
--- `onPick(raw)` receives the raw value under the cursor; the caller snaps it.
+-- Drag, click on the track or use the mouse wheel; `onPick(raw)` gets the raw value.
 local function makeSlider(parent, control, onPick)
   local slider = CreateFrame("Frame", nil, parent)
   slider:SetSize(WIDGET_WIDTH - 44, 18)
   slider:EnableMouse(true)
   slider:EnableMouseWheel(true)
-  local track = slider:CreateTexture(nil, "BACKGROUND")
+  local track = solid(slider, "BACKGROUND", { 0.25, 0.23, 0.32, 1 })
   track:SetPoint("LEFT")
   track:SetPoint("RIGHT")
   track:SetHeight(4)
-  track:SetColorTexture(0.25, 0.23, 0.32, 1)
-  slider.fill = slider:CreateTexture(nil, "BORDER")
+  slider.fill = solid(slider, "BORDER", { 0.73, 0.55, 1, 1 })
   slider.fill:SetPoint("LEFT")
   slider.fill:SetHeight(4)
-  slider.fill:SetColorTexture(0.73, 0.55, 1, 1)
-  slider.thumb = slider:CreateTexture(nil, "ARTWORK")
+  slider.thumb = solid(slider, "ARTWORK", { 0.92, 0.9, 0.98, 1 })
   slider.thumb:SetSize(8, 14)
-  slider.thumb:SetColorTexture(0.92, 0.9, 0.98, 1)
-  slider.text = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  slider.text = fontString(slider, 11, C.text)
   slider.text:SetPoint("LEFT", slider, "RIGHT", 8, 0)
 
   function slider:SetValue(value)
@@ -408,244 +497,410 @@ end
 local function makeSwatch(parent)
   local swatch = CreateFrame("Button", nil, parent)
   swatch:SetSize(40, 18)
-  local edge = swatch:CreateTexture(nil, "BACKGROUND")
+  local edge = solid(swatch, "BACKGROUND", C.widgetEdge)
   edge:SetAllPoints()
-  edge:SetColorTexture(0.45, 0.42, 0.55, 1)
   swatch.color = swatch:CreateTexture(nil, "ARTWORK")
   swatch.color:SetPoint("TOPLEFT", 1, -1)
   swatch.color:SetPoint("BOTTOMRIGHT", -1, 1)
   local hl = swatch:CreateTexture(nil, "HIGHLIGHT")
   hl:SetAllPoints()
   hl:SetColorTexture(1, 1, 1, 0.15)
-  swatch.reset = makeButton(parent, 22, "×")
+  swatch.reset = flatButton(parent, 20, 18, "x")
   swatch.reset:SetPoint("LEFT", swatch, "RIGHT", 6, 0)
   return swatch
 end
 
-function Options.create()
-  local panel = CreateFrame("Frame", "OdysseyOptionsPanel", UIParent)
-  panel.name = "Odyssey"
-  Options.panel = panel
+-- ===================================================================== window
 
-  local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-  title:SetPoint("TOPLEFT", 16, -16)
-  title:SetText("Odyssey")
+local WINDOW_W, WINDOW_H = 720, 540
+local TITLE_H, SIDEBAR_W = 32, 150
+local CONTENT_W = WINDOW_W - SIDEBAR_W - 20 -- inside the scroll frame
+local CARD_GAP = 12
+local CARD_W = (CONTENT_W - CARD_GAP) / 2
+local ROW_H = 26
+local CARD_HEADER = 28
+local PREVIEW_BAR_H = 88
+local TOOLTIP_PREVIEW_H = 420
 
-  local pages, tabButtons, widgets = {}, {}, {}
-  local currentTab, previewDetailed = "bar", false
+local window, widgets, refresh
 
-  -- The settings window itself when the client has one, else our panel.
-  local function previewAnchor()
-    return (SettingsPanel and SettingsPanel:IsShown() and SettingsPanel) or panel
+local function setGradient(tex, from, to)
+  if tex.SetGradient and CreateColor then
+    local ok = pcall(tex.SetGradient, tex, "HORIZONTAL",
+      CreateColor(from[1], from[2], from[3], 1), CreateColor(to[1], to[2], to[3], 1))
+    if ok then return end
   end
-  local function updatePreview()
-    if not ns.Tooltip then return end
-    if currentTab == "tooltip" and panel:IsVisible() then
-      ns.Tooltip.ShowPreview(previewAnchor(), previewDetailed)
+  tex:SetVertexColor(to[1], to[2], to[3], 1)
+end
+
+local function changed(control)
+  if control and control.account then Defaults.merge(ns.Settings(), Defaults.settings) end
+  ns.Refresh() -- redraws the bars, then calls Options.Refresh for the window and previews
+end
+
+-- One row of a card: label on the left, widget on the right.
+local function buildRow(card, control, y)
+  local label = fontString(card, 12, C.text)
+  label:SetPoint("TOPLEFT", 12, y - 4)
+  local widgetSpace = (control.kind == "check" and 30) or (control.kind == "color" and 80)
+    or (control.kind == "info" and 120) or (WIDGET_WIDTH + 14)
+  label:SetWidth(CARD_W - 24 - widgetSpace)
+  label:SetWordWrap(false)
+  label:SetText(L[control.label])
+  local right = CARD_W - 12
+  local widget
+
+  if control.kind == "check" then
+    widget = makeCheck(card)
+    widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 2)
+    widget:SetScript("OnClick", function()
+      local t = target(control)
+      Defaults.set(t, control.key, not Defaults.get(t, control.key))
+      changed(control)
+    end)
+  elseif control.kind == "menu" then
+    widget = flatButton(card, WIDGET_WIDTH, 20, "", "menu")
+    widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 1)
+    widget:SetScript("OnClick", function(self)
+      openMenu(self, control, Options.currentValue(target(control), control), function(value)
+        Options.applyValue(target(control), control, value)
+        changed(control)
+      end)
+    end)
+  elseif control.kind == "slider" then
+    widget = makeSlider(card, control, function(raw)
+      local t = target(control)
+      local value = Options.sliderValue(control, raw)
+      if value ~= Defaults.get(t, control.key) then
+        Options.applyValue(t, control, value)
+        changed(control)
+      end
+    end)
+    widget:SetPoint("TOPLEFT", card, "TOPLEFT", right - WIDGET_WIDTH, y - 2)
+  elseif control.kind == "color" then
+    widget = makeSwatch(card)
+    widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right - 26, y - 2)
+    widget:SetScript("OnClick", function()
+      local s = ns.Settings()
+      local _, colors = accentColor()
+      local start = control.part == "fill" and colors.fill.to or colors[control.part]
+      openColorPicker(start, Options.colorSession(s, control.part, start), function() changed(control) end)
+    end)
+    widget.reset:SetScript("OnClick", function()
+      Defaults.set(ns.Settings(), control.key, nil)
+      changed(control)
+    end)
+  elseif control.kind == "action" then
+    label:Hide()
+    widget = flatButton(card, CARD_W - 24, 22, L[control.label])
+    widget:SetPoint("TOPLEFT", 12, y - 1)
+    widget:SetScript("OnClick", function()
+      Options.ACTIONS[control.action]()
+      changed(control)
+    end)
+  elseif control.kind == "info" then
+    widget = fontString(card, 12, C.muted)
+    widget:SetPoint("TOPRIGHT", card, "TOPLEFT", right, y - 4)
+    widget:SetText(addonVersion())
+  end
+  widgets[#widgets + 1] = { control = control, widget = widget, label = label }
+end
+
+local function buildCard(parent, section, card)
+  local rows = {}
+  for _, control in ipairs(Options.CONTROLS) do
+    if control.section == section.key and control.card == card.key then rows[#rows + 1] = control end
+  end
+  local frame = CreateFrame("Frame", nil, parent)
+  frame:SetSize(CARD_W, CARD_HEADER + #rows * ROW_H + 8)
+  local edge = solid(frame, "BACKGROUND", C.cardEdge, -1)
+  edge:SetAllPoints()
+  local bg = solid(frame, "BACKGROUND", C.card)
+  bg:SetPoint("TOPLEFT", 1, -1)
+  bg:SetPoint("BOTTOMRIGHT", -1, 1)
+  local title = fontString(frame, 11, { 0.79, 0.64, 1 })
+  title:SetPoint("TOPLEFT", 12, -9)
+  title:SetText(string.upper(L[card.label]))
+  for i, control in ipairs(rows) do buildRow(frame, control, -CARD_HEADER - (i - 1) * ROW_H) end
+  return frame
+end
+
+-- Lays the section's cards in two columns, each card going to the shorter column.
+local function buildPage(scrollChild, section)
+  local page = CreateFrame("Frame", nil, scrollChild)
+  page:SetPoint("TOPLEFT")
+  page:SetWidth(CONTENT_W)
+  local top = 0
+  if section.preview then
+    local card = CreateFrame("Frame", nil, page)
+    local height = section.preview == "tooltip" and TOOLTIP_PREVIEW_H or PREVIEW_BAR_H
+    local width = section.preview == "tooltip" and CARD_W or CONTENT_W
+    card:SetSize(width, height)
+    local edge = solid(card, "BACKGROUND", C.cardEdge, -1)
+    edge:SetAllPoints()
+    local bg = solid(card, "BACKGROUND", { 0.08, 0.07, 0.11, 1 })
+    bg:SetPoint("TOPLEFT", 1, -1)
+    bg:SetPoint("BOTTOMRIGHT", -1, 1)
+    local title = fontString(card, 11, { 0.79, 0.64, 1 })
+    title:SetPoint("TOPLEFT", 12, -9)
+    title:SetText(string.upper(L["Preview"]))
+    page.previewCard = card
+    if section.preview == "bar" then
+      card:SetPoint("TOPLEFT", 0, 0)
+      top = height + CARD_GAP
+    else
+      card:SetPoint("TOPLEFT", CARD_W + CARD_GAP, 0) -- tooltip preview: right column
+    end
+  end
+
+  local columns = { top, top }
+  local tooltipLayout = section.preview == "tooltip"
+  for _, cardDef in ipairs(section.cards) do
+    local card = buildCard(page, section, cardDef)
+    -- The tooltip preview owns the whole right column (the detailed view is tall).
+    local col = (tooltipLayout or columns[1] <= columns[2]) and 1 or 2
+    card:SetPoint("TOPLEFT", (col - 1) * (CARD_W + CARD_GAP), -columns[col])
+    columns[col] = columns[col] + card:GetHeight() + CARD_GAP
+  end
+  if tooltipLayout then
+    page.previewCard:SetHeight(math.max(TOOLTIP_PREVIEW_H, columns[1] - CARD_GAP))
+    columns[2] = page.previewCard:GetHeight()
+  end
+  page:SetHeight(math.max(columns[1], columns[2]))
+  page:Hide()
+  return page
+end
+
+local function createWindow()
+  widgets = {}
+  window = CreateFrame("Frame", "OdysseyWindow", UIParent)
+  window:SetSize(WINDOW_W, WINDOW_H)
+  window:SetFrameStrata("DIALOG")
+  window:SetClampedToScreen(true)
+  window:SetMovable(true)
+  window:EnableMouse(true)
+  window:Hide()
+  if UISpecialFrames then table.insert(UISpecialFrames, "OdysseyWindow") end
+
+  local edge = solid(window, "BACKGROUND", { 0.23, 0.19, 0.31, 1 }, -1)
+  edge:SetPoint("TOPLEFT", -1, 1)
+  edge:SetPoint("BOTTOMRIGHT", 1, -1)
+  local bg = solid(window, "BACKGROUND", C.window)
+  bg:SetAllPoints()
+
+  -- Title bar: drag handle, palette-tinted gradient, close button.
+  local titleBar = CreateFrame("Frame", nil, window)
+  titleBar:SetPoint("TOPLEFT")
+  titleBar:SetPoint("TOPRIGHT")
+  titleBar:SetHeight(TITLE_H)
+  titleBar:EnableMouse(true)
+  titleBar:RegisterForDrag("LeftButton")
+  titleBar:SetScript("OnDragStart", function() window:StartMoving() end)
+  titleBar:SetScript("OnDragStop", function()
+    window:StopMovingOrSizing()
+    local point, _, relativePoint, x, y = window:GetPoint()
+    OdysseyDB.window = { point, relativePoint, x, y }
+  end)
+  window.titleTex = titleBar:CreateTexture(nil, "BACKGROUND")
+  window.titleTex:SetAllPoints()
+  window.titleTex:SetTexture(Styles.resolveTexture("flat", nil))
+  local title = fontString(titleBar, 14, { 1, 1, 1 })
+  title:SetPoint("LEFT", 14, 0)
+  title:SetText("Odyssey")
+  local close = flatButton(titleBar, 22, 20, "X")
+  close:SetPoint("RIGHT", -8, 0)
+  close:SetScript("OnClick", function() window:Hide() end)
+
+  -- Sidebar.
+  local sidebar = CreateFrame("Frame", nil, window)
+  sidebar:SetPoint("TOPLEFT", 0, -TITLE_H)
+  sidebar:SetPoint("BOTTOMLEFT")
+  sidebar:SetWidth(SIDEBAR_W)
+  local sideBg = solid(sidebar, "BACKGROUND", C.sidebar)
+  sideBg:SetAllPoints()
+
+  -- Scrolling content.
+  local scroll = CreateFrame("ScrollFrame", nil, window)
+  scroll:SetPoint("TOPLEFT", SIDEBAR_W + 10, -TITLE_H - 10)
+  scroll:SetPoint("BOTTOMRIGHT", -10, 10)
+  scroll:EnableMouseWheel(true)
+  local child = CreateFrame("Frame", nil, scroll)
+  child:SetSize(CONTENT_W, 10)
+  scroll:SetScrollChild(child)
+  scroll:SetScript("OnMouseWheel", function(self, delta)
+    local max = math.max(0, child:GetHeight() - self:GetHeight())
+    self:SetVerticalScroll(math.max(0, math.min(max, self:GetVerticalScroll() - delta * 40)))
+  end)
+
+  window.pages, window.tabs = {}, {}
+  for i, section in ipairs(Options.SECTIONS) do
+    window.pages[section.key] = buildPage(child, section)
+    local tab = CreateFrame("Button", nil, sidebar)
+    tab:SetSize(SIDEBAR_W, 32)
+    tab:SetPoint("TOPLEFT", 0, -8 - (i - 1) * 34)
+    tab.bg = solid(tab, "BACKGROUND", { 0.13, 0.11, 0.2, 1 })
+    tab.bg:SetAllPoints()
+    tab.strip = tab:CreateTexture(nil, "ARTWORK")
+    tab.strip:SetPoint("TOPLEFT")
+    tab.strip:SetPoint("BOTTOMLEFT")
+    tab.strip:SetWidth(3)
+    local hl = tab:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 1, 1, 0.05)
+    tab.label = fontString(tab, 13, C.text)
+    tab.label:SetPoint("LEFT", 16, 0)
+    tab.label:SetText(L[section.label])
+    tab:SetScript("OnClick", function() Options.Select(section.key) end)
+    window.tabs[section.key] = tab
+  end
+
+  -- "Detailed preview" toggle under the tooltip preview (not saved).
+  local tooltipPage = window.pages.tooltip
+  local detail = makeCheck(tooltipPage.previewCard)
+  detail:SetPoint("TOPRIGHT", -10, -6)
+  detail.mark:Hide()
+  local detailLabel = fontString(tooltipPage.previewCard, 11, C.muted)
+  detailLabel:SetPoint("RIGHT", detail, "LEFT", -6, 0)
+  detailLabel:SetText(L["Detailed preview"])
+  detail:SetScript("OnClick", function()
+    window.previewDetailed = not window.previewDetailed
+    detail.mark:SetShown(window.previewDetailed)
+    Options.UpdatePreview()
+  end)
+
+  window.scroll, window.child = scroll, child
+  window:SetScript("OnHide", function()
+    if menu then menu:Hide() end
+    if ns.Tooltip then ns.Tooltip.HidePreview() end
+  end)
+  window:SetScript("OnShow", function()
+    refresh()
+    Options.UpdatePreview()
+  end)
+
+  local p = OdysseyDB.window or { "CENTER", "CENTER", 0, 0 }
+  window:SetPoint(p[1], UIParent, p[2], p[3], p[4])
+end
+
+function refresh()
+  if not window then return end
+  local accent, colors = accentColor()
+  window.titleTex:SetVertexColor(1, 1, 1, 1)
+  setGradient(window.titleTex, { accent[1] * 0.45, accent[2] * 0.45, accent[3] * 0.45 }, { 0.09, 0.07, 0.12 })
+  for key, tab in pairs(window.tabs) do
+    local selected = key == window.current
+    tab.bg:SetShown(selected)
+    tab.strip:SetColorTexture(accent[1], accent[2], accent[3], selected and 1 or 0)
+  end
+  for _, w in ipairs(widgets) do
+    local c = w.control
+    local t = target(c)
+    local value = Options.currentValue(t, c)
+    if c.enabledWhen then
+      local enabled = Options.isEnabled(t, c)
+      w.widget.enabled = enabled
+      w.widget:SetAlpha(enabled and 1 or 0.35)
+      w.label:SetAlpha(enabled and 1 or 0.35)
+    end
+    if c.kind == "slider" then
+      w.widget:SetValue(value)
+    elseif c.kind == "check" then
+      w.widget.mark:SetShown(value and true or false)
+    elseif c.kind == "menu" then
+      w.widget:SetText(Options.displayValue(c, value))
+    elseif c.kind == "color" then
+      local color = c.part == "fill" and colors.fill.to or colors[c.part]
+      w.widget.color:SetColorTexture(color[1], color[2], color[3], 1)
+      w.widget.reset:SetShown(value ~= nil)
+    end
+  end
+end
+
+-- Shows the live preview of the current section: the mini bar, or the tooltip.
+function Options.UpdatePreview()
+  if not window or not window:IsShown() then return end
+  local section
+  for _, s in ipairs(Options.SECTIONS) do if s.key == window.current then section = s end end
+  local page = window.pages[window.current]
+  if section and section.preview == "bar" then
+    if not ns.previewBar then
+      ns.previewBar = ns.Bar.create(ns.source, { parent = page.previewCard, width = CONTENT_W - 40 })
+    end
+    local bar = ns.previewBar.frame
+    bar:SetParent(page.previewCard)
+    bar:ClearAllPoints()
+    bar:SetPoint("LEFT", page.previewCard, "LEFT", 20, -6)
+    bar:Show()
+    ns.previewBar:ApplySettings()
+    ns.previewBar:Update()
+  elseif ns.previewBar then
+    ns.previewBar.frame:Hide()
+  end
+  if ns.Tooltip then
+    if section and section.preview == "tooltip" then
+      ns.Tooltip.ShowPreview(page.previewCard, window.previewDetailed, true)
     else
       ns.Tooltip.HidePreview()
     end
   end
+end
 
-  local function refresh()
-    local s = ns.Settings()
-    local colors = (ns.bar and ns.bar.colors) or Palettes.effective(s.palette, {}, s)
-    for _, w in ipairs(widgets) do
-      local c = w.control
-      local value = Options.currentValue(target(c), c)
-      if w.widget and c.enabledWhen then
-        local enabled = Options.isEnabled(target(c), c)
-        w.widget.enabled = enabled
-        w.widget:SetAlpha(enabled and 1 or 0.35)
-        w.label:SetAlpha(enabled and 1 or 0.35)
-      end
-      if c.kind == "header" then
-        -- nothing to refresh
-      elseif c.kind == "slider" then
-        w.widget:SetValue(value)
-      elseif c.kind == "check" then
-        w.widget.mark:SetShown(value and true or false)
-      elseif c.kind == "menu" then
-        w.widget:SetText(Options.displayValue(c, value))
-      else
-        local color = colors[c.part]
-        if c.part == "fill" then color = colors.fill.to end
-        w.widget.color:SetColorTexture(color[1], color[2], color[3], 1)
-        w.widget.reset:SetShown(value ~= nil)
-      end
-    end
-  end
+function Options.Select(key)
+  if menu then menu:Hide() end
+  window.current = key
+  for k, page in pairs(window.pages) do page:SetShown(k == key) end
+  window.child:SetHeight(window.pages[key]:GetHeight())
+  window.scroll:SetVerticalScroll(0)
+  refresh()
+  Options.UpdatePreview()
+end
 
-  local function changed(control)
-    if control.account then Defaults.merge(ns.Settings(), Defaults.settings) end
-    ns.Refresh()
+-- Keeps widgets and previews in sync after any change (Core's ns.Refresh calls it, so
+-- slash commands are covered too).
+function Options.Refresh()
+  if window and window:IsShown() then
     refresh()
-    updatePreview()
-  end
-
-  local function selectTab(key)
-    currentTab = key
-    for k, page in pairs(pages) do page:SetShown(k == key) end
-    for k, button in pairs(tabButtons) do
-      if k == key then button:LockHighlight() else button:UnlockHighlight() end
-    end
-    if menu then menu:Hide() end
-    updatePreview()
-  end
-
-  for i, tab in ipairs(Options.TABS) do
-    local button = makeButton(panel, 110, L[tab.label])
-    button:SetPoint("TOPLEFT", 16 + (i - 1) * 116, -44)
-    button:SetScript("OnClick", function() selectTab(tab.key) end)
-    tabButtons[tab.key] = button
-    local page = CreateFrame("Frame", nil, panel)
-    page:SetPoint("TOPLEFT", 0, 0)
-    page:SetPoint("BOTTOMRIGHT", 0, 0)
-    pages[tab.key] = page
-  end
-
-  local indexInTab = {}
-  for _, control in ipairs(Options.CONTROLS) do
-    local page = pages[control.tab]
-    local i = (indexInTab[control.tab] or 0) + 1
-    indexInTab[control.tab] = i
-    local column = i <= Options.ROWS and 0 or 1
-    local index = (i - 1) % Options.ROWS
-    local x = 16 + column * COLUMN_WIDTH
-    local y = TOP - index * ROW_HEIGHT
-
-    local label = page:CreateFontString(nil, "ARTWORK", control.kind == "header" and "GameFontNormal" or "GameFontHighlight")
-    label:SetPoint("TOPLEFT", x, y)
-    label:SetWidth(control.kind == "header" and (LABEL_WIDTH + WIDGET_WIDTH) or LABEL_WIDTH)
-    label:SetJustifyH("LEFT")
-    label:SetText(L[control.label])
-
-    local widget
-    if control.kind == "header" then
-      -- Sub-section title with a thin line under it; the following rows belong to it.
-      local line = page:CreateTexture(nil, "ARTWORK")
-      line:SetColorTexture(1, 0.82, 0, 0.35)
-      line:SetHeight(1)
-      line:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -3)
-      line:SetWidth(LABEL_WIDTH + WIDGET_WIDTH)
-    elseif control.kind == "slider" then
-      widget = makeSlider(page, control, function(raw)
-        local t = target(control)
-        local value = Options.sliderValue(control, raw)
-        if value ~= Defaults.get(t, control.key) then
-          Options.applyValue(t, control, value)
-          changed(control)
-        end
-      end)
-      widget:SetPoint("TOPLEFT", x + LABEL_WIDTH, y + 2)
-    elseif control.kind == "check" then
-      widget = makeCheck(page)
-      widget:SetPoint("TOPLEFT", x + LABEL_WIDTH, y + 2)
-      widget:SetScript("OnClick", function()
-        local t = target(control)
-        Defaults.set(t, control.key, not Defaults.get(t, control.key))
-        changed(control)
-      end)
-    elseif control.kind == "menu" then
-      widget = makeButton(page, WIDGET_WIDTH, "")
-      widget:SetPoint("TOPLEFT", x + LABEL_WIDTH, y + 4)
-      widget:SetScript("OnClick", function(self)
-        openMenu(self, control, Options.currentValue(target(control), control), function(value)
-          Options.applyValue(target(control), control, value)
-          changed(control)
-        end)
-      end)
-    else
-      widget = makeSwatch(page)
-      widget:SetPoint("TOPLEFT", x + LABEL_WIDTH, y + 2)
-      widget:SetScript("OnClick", function()
-        local s = ns.Settings()
-        local colors = (ns.bar and ns.bar.colors) or Palettes.effective(s.palette, {}, s)
-        local start = control.part == "fill" and colors.fill.to or colors[control.part]
-        openColorPicker(start, Options.colorSession(s, control.part, start), function() changed(control) end)
-      end)
-      widget.reset:SetScript("OnClick", function()
-        Defaults.set(ns.Settings(), control.key, nil)
-        changed(control)
-      end)
-    end
-    widgets[#widgets + 1] = { control = control, widget = widget, label = label }
-  end
-
-  -- "Detailed preview": show the Shift view in the preview without holding Shift (not saved).
-  local detailLabel = pages.tooltip:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-  detailLabel:SetPoint("TOPLEFT", 16, TOP - Options.ROWS * ROW_HEIGHT - 10)
-  detailLabel:SetText(L["Detailed preview"])
-  local detailCheck = makeCheck(pages.tooltip)
-  detailCheck:SetPoint("LEFT", detailLabel, "RIGHT", 10, 0)
-  detailCheck.mark:Hide()
-  detailCheck:SetScript("OnClick", function()
-    previewDetailed = not previewDetailed
-    detailCheck.mark:SetShown(previewDetailed)
-    updatePreview()
-  end)
-
-  local resetColors = makeButton(pages.colors, 260, L["Reset to palette colors"])
-  resetColors:SetPoint("TOPLEFT", 16, TOP - Options.ROWS * ROW_HEIGHT - 10)
-  resetColors:SetScript("OnClick", function()
-    Options.resetColors(ns.Settings())
-    changed({})
-  end)
-
-  local actionsY = TOP - Options.ROWS * ROW_HEIGHT - 50
-  local resetSession = makeButton(panel, 190, L["Reset session"])
-  resetSession:SetPoint("TOPLEFT", 16, actionsY)
-  resetSession:SetScript("OnClick", function()
-    ns.source:resetSession()
-    print("|cff9966ffOdyssey|r: " .. L["Session reset."])
-  end)
-  local clearHistory = makeButton(panel, 190, L["Clear history"])
-  clearHistory:SetPoint("TOPLEFT", 16 + COLUMN_WIDTH, actionsY)
-  clearHistory:SetScript("OnClick", function()
-    History.reset(ns.CharData().history)
-    print("|cff9966ffOdyssey|r: " .. L["History cleared."])
-  end)
-
-  panel:SetScript("OnShow", function()
-    refresh()
-    updatePreview()
-  end)
-  panel:SetScript("OnHide", function()
-    if menu then menu:Hide() end
-    if ns.Tooltip then ns.Tooltip.HidePreview() end
-  end)
-  selectTab("bar")
-
-  -- Register with whichever settings system this client has; otherwise float as its own window.
-  if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
-    local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-    Settings.RegisterAddOnCategory(category)
-    Options.categoryID = category.GetID and category:GetID() or category.ID
-  elseif InterfaceOptions_AddCategory then
-    InterfaceOptions_AddCategory(panel)
-  else
-    panel:SetParent(UIParent)
-    panel:SetSize(640, 520)
-    panel:SetPoint("CENTER")
-    panel:SetFrameStrata("DIALOG")
-    local bg = panel:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.85)
-    local close = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", -4, -4)
-    panel:Hide()
-    Options.standalone = true
+    Options.UpdatePreview()
   end
 end
 
+-- =========================================================== Blizzard settings
+
+-- The game's options keep one small page with a button that opens the Odyssey window.
+local function registerSettingsStub()
+  local panel = CreateFrame("Frame", "OdysseyOptionsPanel", UIParent)
+  panel.name = "Odyssey"
+  local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+  title:SetPoint("TOPLEFT", 16, -16)
+  title:SetText("Odyssey")
+  local text = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  text:SetPoint("TOPLEFT", 16, -48)
+  text:SetText(L["Odyssey has its own settings window."])
+  local open = flatButton(panel, 200, 26, L["Open Odyssey"])
+  open:SetPoint("TOPLEFT", 16, -76)
+  open:SetScript("OnClick", function()
+    if SettingsPanel and SettingsPanel:IsShown() and HideUIPanel then HideUIPanel(SettingsPanel) end
+    ns.OpenOptions()
+  end)
+  if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
+    local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+    Settings.RegisterAddOnCategory(category)
+  elseif InterfaceOptions_AddCategory then
+    InterfaceOptions_AddCategory(panel)
+  end
+end
+
+function Options.create()
+  createWindow()
+  registerSettingsStub()
+end
+
 function ns.OpenOptions()
-  if not Options.panel then return end
-  if Options.categoryID and Settings and Settings.OpenToCategory then
-    Settings.OpenToCategory(Options.categoryID)
-  elseif InterfaceOptionsFrame_OpenToCategory and not Options.standalone then
-    InterfaceOptionsFrame_OpenToCategory(Options.panel)
-    InterfaceOptionsFrame_OpenToCategory(Options.panel) -- first call can open the wrong page (known client quirk)
+  if not window then return end
+  if window:IsShown() then
+    window:Hide()
   else
-    Options.panel:SetShown(not Options.panel:IsShown())
+    window:Show()
+    Options.Select(window.current or "bar")
   end
 end

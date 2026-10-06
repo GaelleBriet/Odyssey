@@ -207,9 +207,13 @@ function Tooltip.Show(anchor)
   end
   frame:SetSize(totalWidth, -y + PAD_Y)
   if previewing then
-    -- Beside the settings window, so it can be watched while it is being tuned.
+    -- Inside the preview card of the settings window, or beside the window.
     frame:ClearAllPoints()
-    frame:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 14, 0)
+    if preview.inside then
+      frame:SetPoint("TOPLEFT", anchor, "TOPLEFT", 12, -30)
+    else
+      frame:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 14, 0)
+    end
   else
     place(anchor)
   end
@@ -217,8 +221,8 @@ function Tooltip.Show(anchor)
 end
 
 -- Keeps the tooltip visible next to `anchor` (the settings window) until HidePreview.
-function Tooltip.ShowPreview(anchor, detailed)
-  preview = { anchor = anchor, detailed = detailed }
+function Tooltip.ShowPreview(anchor, detailed, inside)
+  preview = { anchor = anchor, detailed = detailed, inside = inside }
   Tooltip.Show(anchor)
 end
 

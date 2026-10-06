@@ -55,8 +55,11 @@ test("every option label and menu choice has a real translation", function()
       for _, item in ipairs(ns.Options.choices(c)) do check(item.text, c.key) end
     end
   end
-  for _, t in ipairs(ns.Options.TABS) do
-    if rawget(ns.L, t.label) == nil then untranslated[#untranslated + 1] = "tab: " .. t.label end
+  for _, sec in ipairs(ns.Options.SECTIONS) do
+    if rawget(ns.L, sec.label) == nil then untranslated[#untranslated + 1] = "section: " .. sec.label end
+    for _, card in ipairs(sec.cards) do
+      if rawget(ns.L, card.label) == nil then untranslated[#untranslated + 1] = "card: " .. card.label end
+    end
   end
   eq(untranslated, {})
 end)

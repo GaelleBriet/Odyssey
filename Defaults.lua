@@ -98,6 +98,7 @@ Defaults.settings = {
 Defaults.root = {
   version = 3,
   perCharacter = false,
+  window = { "CENTER", "CENTER", 0, 0 }, -- settings window position (point, relative point, x, y)
   account = Defaults.settings,
   chars = {},
 }

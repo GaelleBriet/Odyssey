@@ -42,6 +42,8 @@ end
 -- Re-applies settings after any change made by the options panel or a slash command.
 function ns.Refresh()
   if ns.bar then ns.bar:ApplySettings(); ns.bar:Update() end
+  if ns.previewBar then ns.previewBar:ApplySettings(); ns.previewBar:Update() end
+  if ns.Options and ns.Options.Refresh then ns.Options.Refresh() end
 end
 
 -- ------------------------------------------------------------- /played (quiet)
