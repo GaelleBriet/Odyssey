@@ -15,6 +15,7 @@ local MUTED = { 0.62, 0.60, 0.68 }
 local SEPARATOR = { 1, 1, 1, 0.12 }
 
 local frame, owner, shiftShown
+local followCursor -- defined with the placement code below, used by the frame's OnUpdate
 local strings, textures = {}, {}
 local usedStrings, usedTextures = 0, 0
 
@@ -83,7 +84,7 @@ end
 local CURSOR_OFFSET = 18
 
 -- Near the mouse ("cursor" anchor), kept on screen by SetClampedToScreen.
-local function followCursor()
+function followCursor()
   local x, y = GetCursorPosition()
   local scale = frame:GetEffectiveScale()
   frame:ClearAllPoints()
