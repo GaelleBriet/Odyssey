@@ -1,5 +1,6 @@
 local ns = newNamespace()
 loadAddonFile("Defaults.lua", ns)
+loadAddonFile("Styles.lua", ns)
 local D = ns.Defaults
 
 test("copy is deep", function()
@@ -42,7 +43,7 @@ end)
 
 test("merge repairs an old, nearly empty OdysseyDB", function()
   local db = D.merge({ probe = { build = "x" } }, D.root)
-  eq(db.version, 2)
+  eq(db.version, 3)
   eq(db.perCharacter, false)
   eq(db.chars, {})
   eq(db.account.style, D.settings.style)
@@ -64,26 +65,36 @@ test("default settings are complete", function()
   eq(s.locked, true)
   eq(s.width, 480)
   eq(s.height, 18)
-  eq(s.style, "smooth")
+  eq(s.style, nil)
+  eq(s.texture, "smooth")
+  eq(s.corners, "rounded")
+  eq(s.border, "thin")
+  eq(s.borderColor, "palette")
+  eq(s.bgOpacity, 0.9)
+  eq(s.gloss, true)
+  eq(s.shadow, true)
+  eq(s.glow, false)
+  eq(s.spark, true)
+  eq(s.ticks, 0)
+  eq(s.textPosition, "inside")
+  eq(s.visibility, "always")
+  eq(s.fadedAlpha, 0)
+  eq(s.colors, {})
   eq(s.palette, "arcane")
-  eq(s.theme, nil)
   eq(s.barFont, "Friz Quadrata")
-  eq(s.barFontSize, 11)
-  eq(s.barFontOutline, "OUTLINE")
-  eq(s.tooltipFont, "Friz Quadrata")
-  eq(s.tooltipFontSize, 12)
-  eq(s.tooltipFontOutline, "NONE")
+  eq(s.tooltipBgOpacity, 0.93)
+  eq(s.tooltipScale, 1)
+  eq(s.tooltipAnchor, "bar")
   eq(s.textCenter, "current_max_percent")
-  eq(s.maxLevelBehavior, "hide")
   eq(s.tooltip.history, true)
   eq(s.point, { "BOTTOM", "UIParent", "BOTTOM", 0, 120 })
-  eq(D.root.version, 2)
+  eq(D.root.version, 3)
 end)
 
-test("migrate converts v1 styles and themes for the account and every character", function()
+test("migrate v1: style and theme become preset fields and a palette, for every character", function()
   local db = {
     version = 1,
-    account = { style = "glossy", theme = "minimal" },
+    account = { style = "glossy", theme = "minimal", height = 16 },
     chars = {
       ["Realm-A"] = { settings = { style = "flat", theme = "class" } },
       ["Realm-B"] = { history = {} },
@@ -91,32 +102,49 @@ test("migrate converts v1 styles and themes for the account and every character"
     },
   }
   D.migrate(db)
-  eq(db.version, 2)
-  eq(db.account.style, "smooth")
-  eq(db.account.palette, "monochrome")
+  eq(db.version, 3)
+  eq(db.account.style, nil)
   eq(db.account.theme, nil)
-  eq(db.chars["Realm-A"].settings.style, "smooth")
+  eq(db.account.palette, "monochrome")
+  eq(db.account.texture, "smooth")
+  eq(db.account.corners, "rounded")
+  eq(db.account.height, 16)
   eq(db.chars["Realm-A"].settings.palette, "class")
+  eq(db.chars["Realm-A"].settings.gloss, true)
 end)
 
-test("migrate maps every v1 theme and keeps unknown v2 values", function()
+test("migrate v1 maps every theme", function()
   local map = { classic = "arcane", class = "class", faction = "faction", minimal = "monochrome" }
   for old, new in pairs(map) do
     local db = { version = 1, account = { theme = old, style = "gradient" }, chars = {} }
     D.migrate(db)
     eq(db.account.palette, new)
-    eq(db.account.style, "smooth")
   end
-  local db = { version = 1, account = { style = "neon" }, chars = {} }
+end)
+
+test("migrate v2: the chosen style becomes its preset, the height is kept", function()
+  local db = { version = 2, account = { style = "segmented", height = 20 }, chars = {} }
   D.migrate(db)
-  eq(db.account.style, "neon")
+  eq(db.version, 3)
+  eq(db.account.style, nil)
+  eq(db.account.ticks, 10)
+  eq(db.account.texture, "gradient")
+  eq(db.account.corners, "square")
+  eq(db.account.height, 20)
+end)
+
+test("migrate v2 with an unknown style uses the smooth preset", function()
+  local db = { version = 2, account = { style = "weird" }, chars = {} }
+  D.migrate(db)
+  eq(db.account.texture, "smooth")
+  eq(db.account.style, nil)
 end)
 
 test("migrate leaves a fresh or already migrated database alone", function()
   local fresh = {}
   D.migrate(fresh)
   eq(fresh, {})
-  local v2 = { version = 2, account = { style = "flat" } }
-  D.migrate(v2)
-  eq(v2.account.style, "flat")
+  local v3 = { version = 3, account = { texture = "flat" } }
+  D.migrate(v3)
+  eq(v3.account.texture, "flat")
 end)

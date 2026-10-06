@@ -49,14 +49,31 @@ Defaults.settings = {
   width = 480,
   height = 18,
   scale = 1,
-  style = "smooth",
+  -- bar look (the presets in Styles.PRESETS fill these fields at once)
+  texture = "smooth",
+  corners = "rounded", -- "square" or "rounded"
+  border = "thin", -- "none", "thin" or "thick"
+  borderColor = "palette", -- "palette", "black" or "gold"
+  bgOpacity = 0.9,
+  gloss = true,
+  shadow = true,
+  glow = false,
+  spark = true,
+  ticks = 0, -- 0, 10 (every 10 %) or 20 (every 5 %)
+  textPosition = "inside", -- "inside", "above" or "below"
+  visibility = "always", -- "always" or "mouseover"
+  fadedAlpha = 0, -- bar opacity while not hovered, in "mouseover" mode
   palette = "arcane",
+  colors = {}, -- per-element overrides: fill, rested, quest, bg, border, text = {r, g, b}
   barFont = "Friz Quadrata",
   barFontSize = 11,
   barFontOutline = "OUTLINE", -- "NONE", "OUTLINE" or "THICKOUTLINE"
   tooltipFont = "Friz Quadrata",
   tooltipFontSize = 12,
   tooltipFontOutline = "NONE",
+  tooltipBgOpacity = 0.93,
+  tooltipScale = 1,
+  tooltipAnchor = "bar", -- "bar" or "cursor"
   textLeft = "level",
   textCenter = "current_max_percent",
   textRight = "rested",
@@ -76,7 +93,7 @@ Defaults.settings = {
 }
 
 Defaults.root = {
-  version = 2,
+  version = 3,
   perCharacter = false,
   account = Defaults.settings,
   chars = {},
@@ -87,8 +104,7 @@ Defaults.root = {
 local V1_STYLES = { flat = "smooth", gradient = "smooth", glossy = "smooth" }
 local V1_THEMES = { classic = "arcane", class = "class", faction = "faction", minimal = "monochrome" }
 
-local function migrateSettings(s)
-  if type(s) ~= "table" then return end
+local function migrateV1(s)
   if V1_STYLES[s.style] then s.style = V1_STYLES[s.style] end
   if s.theme ~= nil then
     s.palette = V1_THEMES[s.theme] or s.palette
@@ -96,15 +112,32 @@ local function migrateSettings(s)
   end
 end
 
--- Upgrades a saved OdysseyDB in place. Run before `merge`, which fills the new keys.
-function Defaults.migrate(db)
-  if type(db.version) ~= "number" or db.version >= 2 then return db end
-  migrateSettings(db.account)
+-- v3 splits the v2 "style" into independent fields: the matching preset fills them,
+-- the user's height is kept.
+local function migrateV2(s)
+  local height = s.height
+  local Styles = ns.Styles
+  if Styles then
+    Styles.applyPreset(s, Styles.PRESETS[s.style] and s.style or "smooth")
+  end
+  if height ~= nil then s.height = height end
+  s.style = nil
+end
+
+local function eachSettings(db, fn)
+  if type(db.account) == "table" then fn(db.account) end
   if type(db.chars) == "table" then
     for _, data in pairs(db.chars) do
-      if type(data) == "table" then migrateSettings(data.settings) end
+      if type(data) == "table" and type(data.settings) == "table" then fn(data.settings) end
     end
   end
-  db.version = 2
+end
+
+-- Upgrades a saved OdysseyDB in place. Run before `merge`, which fills the new keys.
+function Defaults.migrate(db)
+  if type(db.version) ~= "number" or db.version >= 3 then return db end
+  if db.version < 2 then eachSettings(db, migrateV1) end
+  eachSettings(db, migrateV2)
+  db.version = 3
   return db
 end
