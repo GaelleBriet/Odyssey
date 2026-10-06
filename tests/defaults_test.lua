@@ -213,3 +213,9 @@ test("unlinking starts from the XP bar's current look", function()
   xp.colors.fill[1] = 0
   eq(xp.rep.colors.fill[1], 1)
 end)
+
+test("the reputation view is built once per settings table", function()
+  local xp = D.copy(D.settings)
+  truthy(D.repView(xp) == D.repView(xp))
+  truthy(D.repView(xp) ~= D.repView(D.copy(D.settings)))
+end)

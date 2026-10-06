@@ -126,9 +126,9 @@ function TooltipContent.buildRep(snap, settings, opts, L, detailed)
 
   if show.session then
     local g, add = group()
-    if snap.session.perHour then add(L["Rep per hour"], num(snap.session.perHour)) end
-    if snap.session.timeToNext then add(L["Time to next standing"], dur(snap.session.timeToNext)) end
     if detailed then
+      if snap.session.perHour then add(L["Rep per hour"], num(snap.session.perHour)) end
+      if snap.session.timeToNext then add(L["Time to next standing"], dur(snap.session.timeToNext)) end
       add(L["Reputation gained"], signed(snap.session.gained))
       add(L["Duration"], dur(snap.session.seconds))
       if snap.lastGain then add(L["Last gain"], signed(snap.lastGain)) end

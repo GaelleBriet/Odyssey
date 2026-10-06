@@ -109,3 +109,10 @@ test("subscribers are notified", function()
   src:onUpdate()
   truthy(calls >= 1)
 end)
+
+test("without faction IDs, a different faction name is a switch, not a gain", function()
+  local src, state = newSource({ name = "Orgrimmar", standing = 5, min = 3000, max = 9000, value = 4500 })
+  state.faction = { name = "Thunder Bluff", standing = 5, min = 3000, max = 9000, value = 8000 }
+  src:onUpdate()
+  eq(src:Get().session.gained, 0)
+end)

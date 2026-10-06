@@ -38,6 +38,12 @@ function Calc.barTargets(snap, settings)
   }
 end
 
+-- The reputation bar only has a fill (no quest or rested band).
+function Calc.repTargets(snap)
+  local fill = snap.isMax and 1 or Calc.fraction(snap.current, snap.max)
+  return { fill = fill, quest = 0, rested = 0 }
+end
+
 -- Rested and quest segments both start at the fill: the shorter one is drawn on top so
 -- the two show as clean consecutive bands instead of a blended overlap.
 function Calc.topSegment(targets)

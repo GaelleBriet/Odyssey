@@ -163,3 +163,10 @@ test("standing label and colour come from the game, with fallbacks", function()
     eq(#Compat.standingColor(99), 3)
   end)
 end)
+
+test("an empty modern faction record counts as no watched faction", function()
+  withGlobals({ C_Reputation = { GetWatchedFactionData = function() return { name = "", factionID = 0 } end },
+    GetWatchedFactionInfo = false }, function()
+    eq(Compat.watchedFaction(), nil)
+  end)
+end)

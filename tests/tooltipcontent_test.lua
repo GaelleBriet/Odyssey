@@ -127,7 +127,6 @@ test("reputation tooltip: default view", function()
   eq(c.subtitle, "Friendly")
   eq(flat(c), {
     { "Progress=25%", "Standing=1,500 / 6,000", "Remaining=4,500" },
-    { "Rep per hour=600", "Time to next standing=7h 30m" },
   })
   eq(c.hint, "Hold Shift for details")
 end)

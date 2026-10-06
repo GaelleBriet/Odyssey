@@ -342,9 +342,8 @@ function Bar:Update()
   end
 
   if self.kind == "rep" then
-    local fill = Calc.fraction(snap.current, snap.max)
-    if snap.isMax then fill = 1 end
-    self.target = { fill = fill, quest = fill, rested = fill }
+    self.target = Calc.repTargets(snap)
+    self.current.quest, self.current.rested = 0, 0
     -- Standing colour: the game's colour for the current standing, as a gradient.
     if s.colorMode == "standing" and not snap.none then
       local c = ns.Compat.standingColor(snap.standing)

@@ -99,7 +99,7 @@ end
 local function readWatched()
   if C_Reputation and C_Reputation.GetWatchedFactionData then
     local data = C_Reputation.GetWatchedFactionData()
-    if not data or not data.name then return nil end
+    if not data or not data.name or data.name == "" then return nil end
     return {
       name = data.name, factionID = data.factionID, standing = data.reaction,
       min = data.currentReactionThreshold, max = data.nextReactionThreshold, value = data.currentStanding,
@@ -107,7 +107,7 @@ local function readWatched()
   end
   if GetWatchedFactionInfo then
     local name, standing, min, max, value, factionID = GetWatchedFactionInfo()
-    if not name then return nil end
+    if not name or name == "" then return nil end
     return { name = name, factionID = factionID, standing = standing, min = min, max = max, value = value }
   end
   return nil

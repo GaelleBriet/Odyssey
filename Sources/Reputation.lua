@@ -43,9 +43,16 @@ end
 
 -- UPDATE_FACTION: a change of value of the same faction is a gain (or a loss);
 -- a different faction just becomes the new baseline.
+-- Same faction: by ID when both have one, otherwise by name.
+local function sameFaction(a, b)
+  if not a or not b then return false end
+  if a.factionID and b.factionID then return a.factionID == b.factionID end
+  return a.name == b.name
+end
+
 function RepSource:onUpdate()
   local old, new = self.faction, self.api.watched()
-  if old and new and old.factionID == new.factionID then
+  if sameFaction(old, new) then
     local delta = new.value - old.value
     if delta ~= 0 then
       self.sessionGain = self.sessionGain + delta

@@ -123,15 +123,22 @@ for _, key in ipairs(Defaults.LINKED_KEYS) do LINKED[key] = true end
 
 -- The reputation bar's settings as the bar and the settings window see them: its own values,
 -- except the look keys, read from the XP bar while linkStyle is on. Writes go to settings.rep.
+-- One view per settings table, reused: the bar asks for its settings every frame.
+local views = setmetatable({}, { __mode = "k" })
+
 function Defaults.repView(xp)
-  local rep = xp.rep
-  return setmetatable({}, {
+  local view = views[xp]
+  if view then return view end
+  view = setmetatable({}, {
     __index = function(_, key)
+      local rep = xp.rep
       if rep.linkStyle and LINKED[key] then return xp[key] end
       return rep[key]
     end,
-    __newindex = function(_, key, value) rep[key] = value end,
+    __newindex = function(_, key, value) xp.rep[key] = value end,
   })
+  views[xp] = view
+  return view
 end
 
 -- Turning "same style" off starts the reputation bar from the XP bar's current look.
