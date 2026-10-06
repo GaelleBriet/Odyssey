@@ -150,11 +150,11 @@ function Defaults.unlinkRep(xp)
 end
 
 Defaults.root = {
-  version = 3,
-  perCharacter = false,
+  version = 4,
+  profiles = {}, -- [name] = settings (Profiles.lua)
+  profileKeys = {}, -- [character] = profile name
   window = { "CENTER", "CENTER", 0, 0 }, -- settings window position (point, relative point, x, y)
-  account = Defaults.settings,
-  chars = {},
+  chars = {}, -- per character data: leveling history
 }
 
 -- ------------------------------------------------------------- migrations
@@ -191,11 +191,36 @@ local function eachSettings(db, fn)
   end
 end
 
+-- v4: settings live in named profiles. The account settings become the default profile;
+-- characters that used their own settings ("per character" on) get a profile of their own.
+local function migrateV3(db, defaultName)
+  db.profiles = type(db.profiles) == "table" and db.profiles or {}
+  db.profileKeys = type(db.profileKeys) == "table" and db.profileKeys or {}
+  if type(db.account) == "table" then
+    db.profiles[defaultName] = db.account
+    db.defaultProfile = defaultName
+  end
+  if type(db.chars) == "table" then
+    for key, data in pairs(db.chars) do
+      if type(data) == "table" then
+        if db.perCharacter and type(data.settings) == "table" then
+          db.profiles[key] = data.settings
+          db.profileKeys[key] = key
+        end
+        data.settings = nil
+      end
+    end
+  end
+  db.account, db.perCharacter = nil, nil
+end
+
 -- Upgrades a saved OdysseyDB in place. Run before `merge`, which fills the new keys.
-function Defaults.migrate(db)
-  if type(db.version) ~= "number" or db.version >= 3 then return db end
+-- `defaultName` names the profile made from the old account settings.
+function Defaults.migrate(db, defaultName)
+  if type(db.version) ~= "number" or db.version >= 4 then return db end
   if db.version < 2 then eachSettings(db, migrateV1) end
-  eachSettings(db, migrateV2)
-  db.version = 3
+  if db.version < 3 then eachSettings(db, migrateV2) end
+  migrateV3(db, defaultName or "Default")
+  db.version = 4
   return db
 end

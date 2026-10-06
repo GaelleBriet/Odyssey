@@ -43,10 +43,11 @@ end)
 
 test("merge repairs an old, nearly empty OdysseyDB", function()
   local db = D.merge({ probe = { build = "x" } }, D.root)
-  eq(db.version, 3)
-  eq(db.perCharacter, false)
+  eq(db.version, 4)
+  eq(db.profiles, {})
+  eq(db.profileKeys, {})
   eq(db.chars, {})
-  eq(db.account.style, D.settings.style)
+  eq(db.account, nil)
   eq(db.probe.build, "x")
 end)
 
@@ -91,10 +92,10 @@ test("default settings are complete", function()
   eq(s.textCenter, "current_max_percent")
   eq(s.tooltip.history, true)
   eq(s.point, { "BOTTOM", "UIParent", "BOTTOM", 0, 120 })
-  eq(D.root.version, 3)
+  eq(D.root.version, 4)
 end)
 
-test("migrate v1: style and theme become preset fields and a palette, for every character", function()
+test("migrate v1: style and theme become preset fields and a palette in the default profile", function()
   local db = {
     version = 1,
     account = { style = "glossy", theme = "minimal", height = 16 },
@@ -104,52 +105,74 @@ test("migrate v1: style and theme become preset fields and a palette, for every 
       ["Realm-C"] = "junk",
     },
   }
-  D.migrate(db)
-  eq(db.version, 3)
-  eq(db.account.style, nil)
-  eq(db.account.theme, nil)
-  eq(db.account.palette, "monochrome")
-  eq(db.account.texture, "smooth")
-  eq(db.account.corners, "rounded")
-  eq(db.account.height, 16)
-  eq(db.chars["Realm-A"].settings.palette, "class")
-  eq(db.chars["Realm-A"].settings.gloss, true)
+  D.migrate(db, "Défaut")
+  eq(db.version, 4)
+  local p = db.profiles["Défaut"]
+  eq(p.style, nil)
+  eq(p.theme, nil)
+  eq(p.palette, "monochrome")
+  eq(p.texture, "smooth")
+  eq(p.corners, "rounded")
+  eq(p.height, 16)
+  eq(db.account, nil)
+  eq(db.chars["Realm-A"].settings, nil) -- per-character settings were off: dropped
+  eq(db.chars["Realm-B"].history, {})
 end)
 
 test("migrate v1 maps every theme", function()
   local map = { classic = "arcane", class = "class", faction = "faction", minimal = "monochrome" }
   for old, new in pairs(map) do
     local db = { version = 1, account = { theme = old, style = "gradient" }, chars = {} }
-    D.migrate(db)
-    eq(db.account.palette, new)
+    D.migrate(db, "Défaut")
+    eq(db.profiles["Défaut"].palette, new)
   end
 end)
 
 test("migrate v2: the chosen style becomes its preset, the height is kept", function()
   local db = { version = 2, account = { style = "segmented", height = 20 }, chars = {} }
-  D.migrate(db)
-  eq(db.version, 3)
-  eq(db.account.style, nil)
-  eq(db.account.ticks, 10)
-  eq(db.account.texture, "gradient")
-  eq(db.account.corners, "square")
-  eq(db.account.height, 20)
+  D.migrate(db, "Défaut")
+  local p = db.profiles["Défaut"]
+  eq(p.style, nil)
+  eq(p.ticks, 10)
+  eq(p.texture, "gradient")
+  eq(p.corners, "square")
+  eq(p.height, 20)
 end)
 
 test("migrate v2 with an unknown style uses the smooth preset", function()
   local db = { version = 2, account = { style = "weird" }, chars = {} }
-  D.migrate(db)
-  eq(db.account.texture, "smooth")
-  eq(db.account.style, nil)
+  D.migrate(db, "Défaut")
+  eq(db.profiles["Défaut"].texture, "smooth")
+end)
+
+test("migrate v3 with per-character settings: one profile per such character, in use", function()
+  local db = {
+    version = 3, perCharacter = true,
+    account = { width = 480 },
+    chars = {
+      ["Realm-Alice"] = { settings = { width = 640 }, history = { levels = {} } },
+      ["Realm-Bob"] = { history = {} },
+    },
+  }
+  D.migrate(db, "Défaut")
+  eq(db.version, 4)
+  eq(db.perCharacter, nil)
+  eq(db.profiles["Défaut"].width, 480)
+  eq(db.profiles["Realm-Alice"].width, 640)
+  eq(db.profileKeys["Realm-Alice"], "Realm-Alice")
+  eq(db.profileKeys["Realm-Bob"], nil)
+  eq(db.chars["Realm-Alice"].settings, nil)
+  eq(db.chars["Realm-Alice"].history, { levels = {} })
+  eq(db.defaultProfile, "Défaut")
 end)
 
 test("migrate leaves a fresh or already migrated database alone", function()
   local fresh = {}
-  D.migrate(fresh)
+  D.migrate(fresh, "Défaut")
   eq(fresh, {})
-  local v3 = { version = 3, account = { texture = "flat" } }
-  D.migrate(v3)
-  eq(v3.account.texture, "flat")
+  local v4 = { version = 4, profiles = { A = { texture = "flat" } } }
+  D.migrate(v4, "Défaut")
+  eq(v4.profiles.A.texture, "flat")
 end)
 
 test("reputation settings: defaults of their own, nested in the settings", function()
@@ -169,9 +192,11 @@ test("reputation settings: defaults of their own, nested in the settings", funct
 end)
 
 test("an old database gains the reputation settings", function()
-  local db = D.merge({ version = 3, account = { width = 300 }, chars = {} }, D.root)
-  eq(db.account.width, 300)
-  eq(db.account.rep.enabled, true)
+  local db = { version = 3, account = { width = 300 }, chars = {} }
+  D.migrate(db, "Défaut")
+  local p = D.merge(db.profiles["Défaut"], D.settings)
+  eq(p.width, 300)
+  eq(p.rep.enabled, true)
 end)
 
 test("linked view: the look follows the XP bar, the rest is the reputation bar's own", function()
